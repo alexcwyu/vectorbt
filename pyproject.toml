@@ -1,0 +1,122 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "vectorbt"
+version = "0.28.1"
+description = "Python library for backtesting and analyzing trading strategies at scale"
+readme = "README.md"
+requires-python = ">=3.13"
+license = { text = "Apache 2.0 with Commons Clause" }
+authors = [
+    { name = "Oleg Polakow", email = "olegpolakow@gmail.com" },
+]
+keywords = ["trading", "backtesting", "algorithmic-trading", "technical-analysis", "quantitative-finance"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Financial and Insurance Industry",
+    "License :: Free for non-commercial use",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Science/Research",
+    "Topic :: Software Development",
+    "Topic :: Office/Business :: Financial",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+]
+
+dependencies = [
+    "numpy>=2.3.4",
+    "pandas>=2.3.3",
+    "scipy>=1.16.3",
+    "matplotlib>=3.10.7",
+    "plotly>=6.4.0",
+    "ipywidgets>=8.1.8",
+    "numba>=0.62.1",
+    "dill>=0.3.9",
+    "tqdm>=4.67.1",
+    "dateparser>=1.2.0",
+    "imageio>=2.37.0",
+    "scikit-learn>=1.7.2",
+    "schedule>=1.2.2",
+    "requests>=2.32.5",
+    "pytz>=2025.2",
+    "mypy-extensions>=1.1.0",
+]
+
+[project.optional-dependencies]
+full = [
+    "yfinance>=0.2.52",
+    "python-binance>=1.0.23",
+    "ccxt>=4.5.7",
+    "alpaca-py>=0.36.1",
+    "ray>=2.42.0",
+    "ta>=0.11.0",
+    # pandas-ta requires numba==0.61.2 which is incompatible with Python 3.13
+    # "pandas-ta>=0.3.14b0",
+    "TA-Lib>=0.5.1",
+    "python-telegram-bot>=21.10",
+    "quantstats>=0.0.77",
+]
+full-no-talib = [
+    "yfinance>=0.2.52",
+    "python-binance>=1.0.23",
+    "ccxt>=4.5.7",
+    "alpaca-py>=0.36.1",
+    "ray>=2.42.0",
+    "ta>=0.11.0",
+    # pandas-ta requires numba==0.61.2 which is incompatible with Python 3.13
+    # "pandas-ta>=0.3.14b0",
+    "python-telegram-bot>=21.10",
+    "quantstats>=0.0.77",
+]
+test = [
+    "pytest>=9.0.1",
+    "pytest-cov>=6.0.0",
+    "codecov>=2.1.13",
+]
+
+[project.urls]
+Homepage = "https://github.com/polakowo/vectorbt"
+Documentation = "https://vectorbt.dev"
+Repository = "https://github.com/polakowo/vectorbt"
+"Bug Tracker" = "https://github.com/polakowo/vectorbt/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["vectorbt"]
+
+[tool.hatch.build.targets.wheel.shared-data]
+"vectorbt/templates" = "vectorbt/templates"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "vectorbt/**",
+    "README.md",
+    "LICENSE.md",
+]
+exclude = [
+    "tests/**",
+    "docs/**",
+    "examples/**",
+    "scripts/**",
+    "apps/**",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.1",
+    "pytest-cov>=6.0.0",
+    "mypy>=1.18.2",
+    "ruff>=0.14.5",
+]
+
+[tool.uv.sources]
+quantstats = { workspace = true }
+
+[tool.uv]
+override-dependencies = [
+    # pandas-ta requires numba==0.61.2, but we need numba>=0.62.1 for Python 3.13
+    "numba>=0.62.1",
+]
+
