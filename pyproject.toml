@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "vectorbt"
-version = "0.28.1"
+version = "1.0.0"
 description = "Python library for backtesting and analyzing trading strategies at scale"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -46,18 +46,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-full = [
-    "yfinance>=0.2.52",
-    "python-binance>=1.0.23",
-    "ccxt>=4.5.7",
-    "alpaca-py>=0.36.1",
-    "ray>=2.42.0",
-    "ta>=0.11.0",
-    # pandas-ta requires numba==0.61.2 which is incompatible with Python 3.13
-    # "pandas-ta>=0.3.14b0",
-    "TA-Lib>=0.5.1",
-    "python-telegram-bot>=21.10",
-    "quantstats>=0.0.77",
+rust = [
+    "vectorbt-rust==1.0.0",
 ]
 full-no-talib = [
     "yfinance>=0.2.52",
@@ -71,10 +61,31 @@ full-no-talib = [
     "python-telegram-bot>=21.10",
     "quantstats>=0.0.77",
 ]
+full = [
+    "vectorbt[full-no-talib]",
+    "TA-Lib>=0.5.1",
+]
 test = [
     "pytest>=9.0.1",
     "pytest-cov>=6.0.0",
+    "pytest-xdist",
     "codecov>=2.1.13",
+]
+test-rust = [
+    "vectorbt[test]",
+    "maturin>=1.7,<2.0",
+]
+docs = [
+    "mkdocs-material",
+    "mkdocs-minify-plugin",
+    "ruamel.yaml",
+    "mako",
+]
+all = [
+    "vectorbt[rust]",
+    "vectorbt[full]",
+    "vectorbt[test]",
+    "vectorbt[docs]",
 ]
 
 [project.urls]
@@ -118,7 +129,7 @@ override-dependencies = [
 ]
 
 [tool.ruff]
-line-length = 88
+line-length = 120
 target-version = "py313"
 
 [tool.ruff.lint]

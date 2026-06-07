@@ -5,7 +5,7 @@
 
 > Vectorized backtesting and quantitative analytics framework built on NumPy, Pandas, and Numba.
 
-**Version**: 0.28.1
+**Version**: 1.0.0
 **Author**: Oleg Polakow
 **License**: Apache 2.0 with Commons Clause
 **Python**: >= 3.13
@@ -147,3 +147,11 @@ RAND, RANDX, RANDNX, RPROB, RPROBX, RPROBCX, RPROBNX, STX, STCX, OHLCSTX, OHLCST
 - [Workflow](workflow.md) -- Backtesting pipeline, signal generation, portfolio simulation flows
 - [State Management](state-management.md) -- Portfolio state tracking, records, caching
 - [Development](development.md) -- Setup, custom indicators, custom signals, performance tips
+
+## Building the Documentation Site
+
+The documentation site in this directory is built using [mkdocs-material](https://squidfunk.github.io/mkdocs-material/) and hosted on https://vectorbt.dev/.
+
+## License
+
+The code in this directory is licensed under the [GNU Affero General Public License v3.0 or later](https://github.com/polakowo/vectorbt/blob/master/docs/LICENSE.md).
