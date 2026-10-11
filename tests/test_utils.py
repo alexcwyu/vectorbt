@@ -2287,7 +2287,7 @@ class TestParams:
 
 class TestDatetime:
     def test_to_timedelta(self):
-        assert datetime_.freq_to_timedelta("d") == pd.to_timedelta("1d")
+        assert datetime_.freq_to_timedelta("d") == pd.to_timedelta("1D")
 
     def test_get_utc_tz(self):
         assert datetime_.get_utc_tz().utcoffset(_datetime.now()) == _timedelta(0)
@@ -2412,7 +2412,7 @@ class TestDatetime:
     @pytest.mark.parametrize(
         "value",
         [
-            np.datetime64("NaT"),
+            np.datetime64("NaT", "ns"),
             np.datetime64("NaT", "us"),
             np.datetime64("NaT", "ns"),
             np.datetime64("0000-12-31", "D"),

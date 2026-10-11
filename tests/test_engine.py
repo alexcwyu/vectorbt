@@ -1,3 +1,5 @@
+from numba.typed import List
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -1317,7 +1319,7 @@ class TestIndicatorRustParity:
         )
 
         ma_cache = indicator_dispatch.ma_cache(close, [2, 2, 3], [False, False, True], False, engine="rust")
-        ma_cache_nb = indicator_nb.ma_cache_nb(close, [2, 2, 3], [False, False, True], False)
+        ma_cache_nb = indicator_nb.ma_cache_nb(close, List([2, 2, 3]), List([False, False, True]), False)
         np.testing.assert_allclose(
             indicator_dispatch.ma_apply(close, 3, True, False, ma_cache, engine="rust"),
             indicator_nb.ma_apply_nb(close, 3, True, False, ma_cache_nb),
@@ -1325,7 +1327,7 @@ class TestIndicatorRustParity:
         )
 
         mstd_cache = indicator_dispatch.mstd_cache(close, [2, 3], [False, True], False, 0, engine="rust")
-        mstd_cache_nb = indicator_nb.mstd_cache_nb(close, [2, 3], [False, True], False, 0)
+        mstd_cache_nb = indicator_nb.mstd_cache_nb(close, List([2, 3]), List([False, True]), False, 0)
         np.testing.assert_allclose(
             indicator_dispatch.mstd_apply(close, 3, True, False, 0, mstd_cache, engine="rust"),
             indicator_nb.mstd_apply_nb(close, 3, True, False, 0, mstd_cache_nb),
@@ -1333,7 +1335,7 @@ class TestIndicatorRustParity:
         )
 
         bb_cache = indicator_dispatch.bb_cache(close, [2, 3], [False, True], [2.0, 3.0], False, 0, engine="rust")
-        bb_cache_nb = indicator_nb.bb_cache_nb(close, [2, 3], [False, True], [2.0, 3.0], False, 0)
+        bb_cache_nb = indicator_nb.bb_cache_nb(close, List([2, 3]), List([False, True]), List([2.0, 3.0]), False, 0)
         for actual, expected in zip(
             indicator_dispatch.bb_apply(close, 3, True, 2.0, False, 0, *bb_cache, engine="rust"),
             indicator_nb.bb_apply_nb(close, 3, True, 2.0, False, 0, *bb_cache_nb),
@@ -1341,7 +1343,7 @@ class TestIndicatorRustParity:
             np.testing.assert_allclose(actual, expected, equal_nan=True)
 
         rsi_cache = indicator_dispatch.rsi_cache(close, [2, 3], [False, True], False, engine="rust")
-        rsi_cache_nb = indicator_nb.rsi_cache_nb(close, [2, 3], [False, True], False)
+        rsi_cache_nb = indicator_nb.rsi_cache_nb(close, List([2, 3]), List([False, True]), False)
         np.testing.assert_allclose(
             indicator_dispatch.rsi_apply(close, 3, True, False, rsi_cache, engine="rust"),
             indicator_nb.rsi_apply_nb(close, 3, True, False, rsi_cache_nb),
@@ -1351,7 +1353,7 @@ class TestIndicatorRustParity:
         stoch_cache = indicator_dispatch.stoch_cache(
             high, low, close, [2, 3], [2, 3], [False, True], False, engine="rust"
         )
-        stoch_cache_nb = indicator_nb.stoch_cache_nb(high, low, close, [2, 3], [2, 3], [False, True], False)
+        stoch_cache_nb = indicator_nb.stoch_cache_nb(high, low, close, List([2, 3]), List([2, 3]), List([False, True]), False)
         for actual, expected in zip(
             indicator_dispatch.stoch_apply(high, low, close, 3, 2, True, False, stoch_cache, engine="rust"),
             indicator_nb.stoch_apply_nb(high, low, close, 3, 2, True, False, stoch_cache_nb),
@@ -1361,7 +1363,7 @@ class TestIndicatorRustParity:
         macd_cache = indicator_dispatch.macd_cache(
             close, [2, 3], [3, 4], [2, 3], [False, True], [False, True], False, engine="rust"
         )
-        macd_cache_nb = indicator_nb.macd_cache_nb(close, [2, 3], [3, 4], [2, 3], [False, True], [False, True], False)
+        macd_cache_nb = indicator_nb.macd_cache_nb(close, List([2, 3]), List([3, 4]), List([2, 3]), List([False, True]), List([False, True]), False)
         for actual, expected in zip(
             indicator_dispatch.macd_apply(close, 2, 3, 2, False, True, False, macd_cache, engine="rust"),
             indicator_nb.macd_apply_nb(close, 2, 3, 2, False, True, False, macd_cache_nb),
@@ -1374,7 +1376,7 @@ class TestIndicatorRustParity:
             equal_nan=True,
         )
         atr_cache = indicator_dispatch.atr_cache(high, low, close, [2, 3], [False, True], False, engine="rust")
-        atr_cache_nb = indicator_nb.atr_cache_nb(high, low, close, [2, 3], [False, True], False)
+        atr_cache_nb = indicator_nb.atr_cache_nb(high, low, close, List([2, 3]), List([False, True]), False)
         for actual, expected in zip(
             indicator_dispatch.atr_apply(high, low, close, 3, True, False, *atr_cache, engine="rust"),
             indicator_nb.atr_apply_nb(high, low, close, 3, True, False, *atr_cache_nb),

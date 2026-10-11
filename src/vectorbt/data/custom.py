@@ -25,13 +25,11 @@ from vectorbt.data.base import Data
 from vectorbt.utils.config import merge_dicts, get_func_kwargs
 from vectorbt.utils.datetime_ import get_utc_tz, get_local_tz, to_tzaware_datetime, datetime_to_ms
 
-try:
+if tp.TYPE_CHECKING:
     from binance.client import Client as ClientT
-except ImportError:
-    ClientT = tp.Any
-try:
     from ccxt.base.exchange import Exchange as ExchangeT
-except ImportError:
+else:
+    ClientT = tp.Any
     ExchangeT = tp.Any
 
 

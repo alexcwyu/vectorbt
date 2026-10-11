@@ -16,7 +16,7 @@ try:
 except:
     qs_available = False
 
-day_dt = np.timedelta64(86400000000000)
+day_dt = np.timedelta64(86400000000000, "ns")
 
 ts = pd.DataFrame(
     {"a": [1, 2, 3, 4, 5], "b": [5, 4, 3, 2, 1], "c": [1, 2, 3, 2, 1]},
@@ -687,178 +687,179 @@ class TestAccessors:
         )
 
     def test_stats(self):
-        stats_index = pd.Index(
-            [
-                "Start",
-                "End",
-                "Period",
-                "Total Return [%]",
-                "Annualized Return [%]",
-                "Annualized Volatility [%]",
-                "Max Drawdown [%]",
-                "Max Drawdown Duration",
-                "Sharpe Ratio",
-                "Calmar Ratio",
-                "Omega Ratio",
-                "Sortino Ratio",
-                "Skew",
-                "Kurtosis",
-                "Tail Ratio",
-                "Common Sense Ratio",
-                "Value at Risk",
-            ],
-            dtype="object",
-        )
-        pd.testing.assert_series_equal(
-            rets.vbt.returns.stats(),
-            pd.Series(
+        with pytest.warns(UserWarning, match='Object has multiple columns|Metric .* returned multiple values|Metric .* requires benchmark_rets|Changing the (mapping|frequency|year frequency) will create a copy|Metric .* does not support grouped data|Metric .* raised an exception'):
+            stats_index = pd.Index(
                 [
-                    pd.Timestamp("2018-01-01 00:00:00"),
-                    pd.Timestamp("2018-01-05 00:00:00"),
-                    pd.Timedelta("5 days 00:00:00"),
-                    106.66666666666667,
-                    3.529303946892918e52,
-                    747.9800589021598,
-                    73.33333333333333,
-                    pd.Timedelta("3 days 00:00:00"),
-                    -4.926913414772034,
-                    -0.625,
-                    np.inf,
-                    np.inf,
-                    0.25687104876585726,
-                    -0.25409565813913854,
-                    1.9693400167084374,
-                    1.2436594860479807e51,
-                    -0.2291666666666667,
+                    "Start",
+                    "End",
+                    "Period",
+                    "Total Return [%]",
+                    "Annualized Return [%]",
+                    "Annualized Volatility [%]",
+                    "Max Drawdown [%]",
+                    "Max Drawdown Duration",
+                    "Sharpe Ratio",
+                    "Calmar Ratio",
+                    "Omega Ratio",
+                    "Sortino Ratio",
+                    "Skew",
+                    "Kurtosis",
+                    "Tail Ratio",
+                    "Common Sense Ratio",
+                    "Value at Risk",
                 ],
-                index=stats_index,
-                name="agg_func_mean",
-            ),
-        )
-        pd.testing.assert_series_equal(
-            rets.vbt.returns.stats(column="a"),
-            pd.Series(
-                [
-                    pd.Timestamp("2018-01-01 00:00:00"),
-                    pd.Timestamp("2018-01-05 00:00:00"),
-                    pd.Timedelta("5 days 00:00:00"),
-                    400.0,
-                    1.0587911840678753e53,
-                    641.7884083645566,
-                    np.nan,
-                    pd.NaT,
-                    29.052280196490333,
-                    np.nan,
-                    np.inf,
-                    np.inf,
-                    1.4693345482106241,
-                    2.030769230769236,
-                    3.5238095238095237,
-                    3.730978458143942e51,
-                    0.26249999999999996,
-                ],
-                index=stats_index,
-                name="a",
-            ),
-        )
-        pd.testing.assert_series_equal(
-            rets.vbt.returns.stats(column="a", settings=dict(freq="10 days", year_freq="200 days")),
-            pd.Series(
-                [
-                    pd.Timestamp("2018-01-01 00:00:00"),
-                    pd.Timestamp("2018-01-05 00:00:00"),
-                    pd.Timedelta("50 days 00:00:00"),
-                    400.0,
-                    62400.0,
-                    150.23130314433288,
-                    np.nan,
-                    pd.NaT,
-                    6.800624405721308,
-                    np.nan,
-                    np.inf,
-                    np.inf,
-                    1.4693345482106241,
-                    2.030769230769236,
-                    3.5238095238095237,
-                    2202.3809523809523,
-                    0.26249999999999996,
-                ],
-                index=stats_index,
-                name="a",
-            ),
-        )
-        pd.testing.assert_series_equal(
-            rets.vbt.returns.stats(column="a", settings=dict(benchmark_rets=benchmark_rets)),
-            pd.Series(
-                [
-                    pd.Timestamp("2018-01-01 00:00:00"),
-                    pd.Timestamp("2018-01-05 00:00:00"),
-                    pd.Timedelta("5 days 00:00:00"),
-                    400.0,
-                    451.8597134178033,
-                    1.0587911840678753e53,
-                    641.7884083645566,
-                    np.nan,
-                    pd.NaT,
-                    29.052280196490333,
-                    np.nan,
-                    np.inf,
-                    np.inf,
-                    1.4693345482106241,
-                    2.030769230769236,
-                    3.5238095238095237,
-                    3.730978458143942e51,
-                    0.26249999999999996,
-                    41819510790.213036,
-                    0.7853755858374825,
-                ],
-                index=pd.Index(
+                dtype="object",
+            )
+            pd.testing.assert_series_equal(
+                rets.vbt.returns.stats(),
+                pd.Series(
                     [
-                        "Start",
-                        "End",
-                        "Period",
-                        "Total Return [%]",
-                        "Benchmark Return [%]",
-                        "Annualized Return [%]",
-                        "Annualized Volatility [%]",
-                        "Max Drawdown [%]",
-                        "Max Drawdown Duration",
-                        "Sharpe Ratio",
-                        "Calmar Ratio",
-                        "Omega Ratio",
-                        "Sortino Ratio",
-                        "Skew",
-                        "Kurtosis",
-                        "Tail Ratio",
-                        "Common Sense Ratio",
-                        "Value at Risk",
-                        "Alpha",
-                        "Beta",
+                        pd.Timestamp("2018-01-01 00:00:00"),
+                        pd.Timestamp("2018-01-05 00:00:00"),
+                        pd.Timedelta("5 days 00:00:00"),
+                        106.66666666666667,
+                        3.529303946892918e52,
+                        747.9800589021598,
+                        73.33333333333333,
+                        pd.Timedelta("3 days 00:00:00"),
+                        -4.926913414772034,
+                        -0.625,
+                        np.inf,
+                        np.inf,
+                        0.25687104876585726,
+                        -0.25409565813913854,
+                        1.9693400167084374,
+                        1.2436594860479807e51,
+                        -0.2291666666666667,
                     ],
-                    dtype="object",
+                    index=stats_index,
+                    name="agg_func_mean",
                 ),
-                name="a",
-            ),
-        )
-        pd.testing.assert_series_equal(
-            rets.vbt.returns.stats(column="a", settings=dict(benchmark_rets=benchmark_rets)),
-            rets.vbt.returns(benchmark_rets=benchmark_rets).stats(column="a"),
-        )
-        pd.testing.assert_series_equal(rets["c"].vbt.returns.stats(), rets.vbt.returns.stats(column="c"))
-        pd.testing.assert_series_equal(
-            rets["c"].vbt.returns.stats(), rets.vbt.returns.stats(column="c", group_by=False)
-        )
-        pd.testing.assert_series_equal(
-            rets.vbt.returns(freq="10d").stats(), rets.vbt.returns.stats(settings=dict(freq="10d"))
-        )
-        pd.testing.assert_series_equal(
-            rets.vbt.returns(freq="d", year_freq="400d").stats(),
-            rets.vbt.returns.stats(settings=dict(freq="d", year_freq="400d")),
-        )
-        stats_df = rets.vbt.returns.stats(agg_func=None)
-        assert stats_df.shape == (3, 17)
-        pd.testing.assert_index_equal(stats_df.index, rets.vbt.returns.wrapper.columns)
-        pd.testing.assert_index_equal(stats_df.columns, stats_index)
+            )
+            pd.testing.assert_series_equal(
+                rets.vbt.returns.stats(column="a"),
+                pd.Series(
+                    [
+                        pd.Timestamp("2018-01-01 00:00:00"),
+                        pd.Timestamp("2018-01-05 00:00:00"),
+                        pd.Timedelta("5 days 00:00:00"),
+                        400.0,
+                        1.0587911840678753e53,
+                        641.7884083645566,
+                        np.nan,
+                        pd.NaT,
+                        29.052280196490333,
+                        np.nan,
+                        np.inf,
+                        np.inf,
+                        1.4693345482106241,
+                        2.030769230769236,
+                        3.5238095238095237,
+                        3.730978458143942e51,
+                        0.26249999999999996,
+                    ],
+                    index=stats_index,
+                    name="a",
+                ),
+            )
+            pd.testing.assert_series_equal(
+                rets.vbt.returns.stats(column="a", settings=dict(freq="10 days", year_freq="200 days")),
+                pd.Series(
+                    [
+                        pd.Timestamp("2018-01-01 00:00:00"),
+                        pd.Timestamp("2018-01-05 00:00:00"),
+                        pd.Timedelta("50 days 00:00:00"),
+                        400.0,
+                        62400.0,
+                        150.23130314433288,
+                        np.nan,
+                        pd.NaT,
+                        6.800624405721308,
+                        np.nan,
+                        np.inf,
+                        np.inf,
+                        1.4693345482106241,
+                        2.030769230769236,
+                        3.5238095238095237,
+                        2202.3809523809523,
+                        0.26249999999999996,
+                    ],
+                    index=stats_index,
+                    name="a",
+                ),
+            )
+            pd.testing.assert_series_equal(
+                rets.vbt.returns.stats(column="a", settings=dict(benchmark_rets=benchmark_rets)),
+                pd.Series(
+                    [
+                        pd.Timestamp("2018-01-01 00:00:00"),
+                        pd.Timestamp("2018-01-05 00:00:00"),
+                        pd.Timedelta("5 days 00:00:00"),
+                        400.0,
+                        451.8597134178033,
+                        1.0587911840678753e53,
+                        641.7884083645566,
+                        np.nan,
+                        pd.NaT,
+                        29.052280196490333,
+                        np.nan,
+                        np.inf,
+                        np.inf,
+                        1.4693345482106241,
+                        2.030769230769236,
+                        3.5238095238095237,
+                        3.730978458143942e51,
+                        0.26249999999999996,
+                        41819510790.213036,
+                        0.7853755858374825,
+                    ],
+                    index=pd.Index(
+                        [
+                            "Start",
+                            "End",
+                            "Period",
+                            "Total Return [%]",
+                            "Benchmark Return [%]",
+                            "Annualized Return [%]",
+                            "Annualized Volatility [%]",
+                            "Max Drawdown [%]",
+                            "Max Drawdown Duration",
+                            "Sharpe Ratio",
+                            "Calmar Ratio",
+                            "Omega Ratio",
+                            "Sortino Ratio",
+                            "Skew",
+                            "Kurtosis",
+                            "Tail Ratio",
+                            "Common Sense Ratio",
+                            "Value at Risk",
+                            "Alpha",
+                            "Beta",
+                        ],
+                        dtype="object",
+                    ),
+                    name="a",
+                ),
+            )
+            pd.testing.assert_series_equal(
+                rets.vbt.returns.stats(column="a", settings=dict(benchmark_rets=benchmark_rets)),
+                rets.vbt.returns(benchmark_rets=benchmark_rets).stats(column="a"),
+            )
+            pd.testing.assert_series_equal(rets["c"].vbt.returns.stats(), rets.vbt.returns.stats(column="c"))
+            pd.testing.assert_series_equal(
+                rets["c"].vbt.returns.stats(), rets.vbt.returns.stats(column="c", group_by=False)
+            )
+            pd.testing.assert_series_equal(
+                rets.vbt.returns(freq="10d").stats(), rets.vbt.returns.stats(settings=dict(freq="10d"))
+            )
+            pd.testing.assert_series_equal(
+                rets.vbt.returns(freq="d", year_freq="400d").stats(),
+                rets.vbt.returns.stats(settings=dict(freq="d", year_freq="400d")),
+            )
+            stats_df = rets.vbt.returns.stats(agg_func=None)
+            assert stats_df.shape == (3, 17)
+            pd.testing.assert_index_equal(stats_df.index, rets.vbt.returns.wrapper.columns)
+            pd.testing.assert_index_equal(stats_df.columns, stats_index)
 
     def test_qs(self):
         if qs_available:
@@ -873,4 +874,5 @@ class TestAccessors:
                 rets.vbt.returns(freq="h", year_freq="252d").qs.sharpe(periods=252, periods_per_year=252, rf=0),
                 qs.stats.sharpe(rets.dropna()),
             )
-            assert rets["a"].vbt.returns(benchmark_rets=benchmark_rets["a"]).qs.r_squared() == 0.6321016849785153
+            # Current QuantStats estimates regression over paired observations.
+            assert rets["a"].vbt.returns(benchmark_rets=benchmark_rets["a"]).qs.r_squared() == 0.8514580867872389

@@ -10,7 +10,7 @@ from tests.utils import record_arrays_close
 from vectorbt.generic.enums import range_dt, drawdown_dt
 from vectorbt.portfolio.enums import order_dt, trade_dt, log_dt
 
-day_dt = np.timedelta64(86400000000000)
+day_dt = np.timedelta64(86400000000000, "ns")
 
 example_dt = np.dtype(
     [("id", np.int64), ("col", np.int64), ("idx", np.int64), ("some_field1", np.float64), ("some_field2", np.float64)],
@@ -790,118 +790,120 @@ class TestMappedArray:
         np.testing.assert_array_equal((abs(-a)).values, abs((-a.values)))
 
     def test_stats(self):
-        stats_index = pd.Index(
-            ["Start", "End", "Period", "Count", "Mean", "Std", "Min", "Median", "Max", "Min Index", "Max Index"],
-            dtype="object",
-        )
-        pd.testing.assert_series_equal(
-            mapped_array.stats(),
-            pd.Series(
-                [
-                    "x",
-                    "z",
-                    pd.Timedelta("3 days 00:00:00"),
-                    2.25,
-                    11.777777777777779,
-                    0.859116756396542,
-                    11.0,
-                    11.666666666666666,
-                    12.666666666666666,
-                ],
-                index=stats_index[:-2],
-                name="agg_func_mean",
-            ),
-        )
-        pd.testing.assert_series_equal(
-            mapped_array.stats(column="a"),
-            pd.Series(
-                ["x", "z", pd.Timedelta("3 days 00:00:00"), 3, 11.0, 1.0, 10.0, 11.0, 12.0, "x", "z"],
-                index=stats_index,
-                name="a",
-            ),
-        )
-        pd.testing.assert_series_equal(
-            mapped_array.stats(column="g1", group_by=group_by),
-            pd.Series(
-                [
-                    "x",
-                    "z",
-                    pd.Timedelta("3 days 00:00:00"),
-                    6,
-                    12.166666666666666,
-                    1.4719601443879746,
-                    10.0,
-                    12.5,
-                    14.0,
-                    "x",
-                    "y",
-                ],
-                index=stats_index,
-                name="g1",
-            ),
-        )
-        pd.testing.assert_series_equal(mapped_array["c"].stats(), mapped_array.stats(column="c"))
-        pd.testing.assert_series_equal(mapped_array["c"].stats(), mapped_array.stats(column="c", group_by=False))
-        pd.testing.assert_series_equal(mapped_array_grouped["g2"].stats(), mapped_array_grouped.stats(column="g2"))
-        pd.testing.assert_series_equal(
-            mapped_array_grouped["g2"].stats(), mapped_array.stats(column="g2", group_by=group_by)
-        )
-        stats_df = mapped_array.stats(agg_func=None)
-        assert stats_df.shape == (4, 11)
-        pd.testing.assert_index_equal(stats_df.index, mapped_array.wrapper.columns)
-        pd.testing.assert_index_equal(stats_df.columns, stats_index)
+        with pytest.warns(UserWarning, match='Object has multiple columns|Metric .* returned multiple values|Metric .* requires benchmark_rets|Changing the (mapping|frequency|year frequency) will create a copy|Metric .* does not support grouped data|Metric .* raised an exception'):
+            stats_index = pd.Index(
+                ["Start", "End", "Period", "Count", "Mean", "Std", "Min", "Median", "Max", "Min Index", "Max Index"],
+                dtype="object",
+            )
+            pd.testing.assert_series_equal(
+                mapped_array.stats(),
+                pd.Series(
+                    [
+                        "x",
+                        "z",
+                        pd.Timedelta("3 days 00:00:00"),
+                        2.25,
+                        11.777777777777779,
+                        0.859116756396542,
+                        11.0,
+                        11.666666666666666,
+                        12.666666666666666,
+                    ],
+                    index=stats_index[:-2],
+                    name="agg_func_mean",
+                ),
+            )
+            pd.testing.assert_series_equal(
+                mapped_array.stats(column="a"),
+                pd.Series(
+                    ["x", "z", pd.Timedelta("3 days 00:00:00"), 3, 11.0, 1.0, 10.0, 11.0, 12.0, "x", "z"],
+                    index=stats_index,
+                    name="a",
+                ),
+            )
+            pd.testing.assert_series_equal(
+                mapped_array.stats(column="g1", group_by=group_by),
+                pd.Series(
+                    [
+                        "x",
+                        "z",
+                        pd.Timedelta("3 days 00:00:00"),
+                        6,
+                        12.166666666666666,
+                        1.4719601443879746,
+                        10.0,
+                        12.5,
+                        14.0,
+                        "x",
+                        "y",
+                    ],
+                    index=stats_index,
+                    name="g1",
+                ),
+            )
+            pd.testing.assert_series_equal(mapped_array["c"].stats(), mapped_array.stats(column="c"))
+            pd.testing.assert_series_equal(mapped_array["c"].stats(), mapped_array.stats(column="c", group_by=False))
+            pd.testing.assert_series_equal(mapped_array_grouped["g2"].stats(), mapped_array_grouped.stats(column="g2"))
+            pd.testing.assert_series_equal(
+                mapped_array_grouped["g2"].stats(), mapped_array.stats(column="g2", group_by=group_by)
+            )
+            stats_df = mapped_array.stats(agg_func=None)
+            assert stats_df.shape == (4, 11)
+            pd.testing.assert_index_equal(stats_df.index, mapped_array.wrapper.columns)
+            pd.testing.assert_index_equal(stats_df.columns, stats_index)
 
     def test_stats_mapping(self):
-        stats_index = pd.Index(
-            [
-                "Start",
-                "End",
-                "Period",
-                "Count",
-                "Value Counts: test_10.0",
-                "Value Counts: test_11.0",
-                "Value Counts: test_12.0",
-                "Value Counts: test_13.0",
-                "Value Counts: test_14.0",
-            ],
-            dtype="object",
-        )
-        pd.testing.assert_series_equal(
-            mp_mapped_array.stats(),
-            pd.Series(
-                ["x", "z", pd.Timedelta("3 days 00:00:00"), 2.25, 0.5, 0.5, 0.5, 0.5, 0.25],
-                index=stats_index,
-                name="agg_func_mean",
-            ),
-        )
-        pd.testing.assert_series_equal(
-            mp_mapped_array.stats(column="a"),
-            pd.Series(["x", "z", pd.Timedelta("3 days 00:00:00"), 3, 1, 1, 1, 0, 0], index=stats_index, name="a"),
-        )
-        pd.testing.assert_series_equal(
-            mp_mapped_array.stats(column="g1", group_by=group_by),
-            pd.Series(["x", "z", pd.Timedelta("3 days 00:00:00"), 6, 1, 1, 1, 2, 1], index=stats_index, name="g1"),
-        )
-        pd.testing.assert_series_equal(mp_mapped_array.stats(), mapped_array.stats(settings=dict(mapping=mapping)))
-        pd.testing.assert_series_equal(
-            mp_mapped_array["c"].stats(settings=dict(incl_all_keys=True)), mp_mapped_array.stats(column="c")
-        )
-        pd.testing.assert_series_equal(
-            mp_mapped_array["c"].stats(settings=dict(incl_all_keys=True)),
-            mp_mapped_array.stats(column="c", group_by=False),
-        )
-        pd.testing.assert_series_equal(
-            mp_mapped_array_grouped["g2"].stats(settings=dict(incl_all_keys=True)),
-            mp_mapped_array_grouped.stats(column="g2"),
-        )
-        pd.testing.assert_series_equal(
-            mp_mapped_array_grouped["g2"].stats(settings=dict(incl_all_keys=True)),
-            mp_mapped_array.stats(column="g2", group_by=group_by),
-        )
-        stats_df = mp_mapped_array.stats(agg_func=None)
-        assert stats_df.shape == (4, 9)
-        pd.testing.assert_index_equal(stats_df.index, mp_mapped_array.wrapper.columns)
-        pd.testing.assert_index_equal(stats_df.columns, stats_index)
+        with pytest.warns(UserWarning, match='Object has multiple columns|Metric .* returned multiple values|Metric .* requires benchmark_rets|Changing the (mapping|frequency|year frequency) will create a copy|Metric .* does not support grouped data|Metric .* raised an exception'):
+            stats_index = pd.Index(
+                [
+                    "Start",
+                    "End",
+                    "Period",
+                    "Count",
+                    "Value Counts: test_10.0",
+                    "Value Counts: test_11.0",
+                    "Value Counts: test_12.0",
+                    "Value Counts: test_13.0",
+                    "Value Counts: test_14.0",
+                ],
+                dtype="object",
+            )
+            pd.testing.assert_series_equal(
+                mp_mapped_array.stats(),
+                pd.Series(
+                    ["x", "z", pd.Timedelta("3 days 00:00:00"), 2.25, 0.5, 0.5, 0.5, 0.5, 0.25],
+                    index=stats_index,
+                    name="agg_func_mean",
+                ),
+            )
+            pd.testing.assert_series_equal(
+                mp_mapped_array.stats(column="a"),
+                pd.Series(["x", "z", pd.Timedelta("3 days 00:00:00"), 3, 1, 1, 1, 0, 0], index=stats_index, name="a"),
+            )
+            pd.testing.assert_series_equal(
+                mp_mapped_array.stats(column="g1", group_by=group_by),
+                pd.Series(["x", "z", pd.Timedelta("3 days 00:00:00"), 6, 1, 1, 1, 2, 1], index=stats_index, name="g1"),
+            )
+            pd.testing.assert_series_equal(mp_mapped_array.stats(), mapped_array.stats(settings=dict(mapping=mapping)))
+            pd.testing.assert_series_equal(
+                mp_mapped_array["c"].stats(settings=dict(incl_all_keys=True)), mp_mapped_array.stats(column="c")
+            )
+            pd.testing.assert_series_equal(
+                mp_mapped_array["c"].stats(settings=dict(incl_all_keys=True)),
+                mp_mapped_array.stats(column="c", group_by=False),
+            )
+            pd.testing.assert_series_equal(
+                mp_mapped_array_grouped["g2"].stats(settings=dict(incl_all_keys=True)),
+                mp_mapped_array_grouped.stats(column="g2"),
+            )
+            pd.testing.assert_series_equal(
+                mp_mapped_array_grouped["g2"].stats(settings=dict(incl_all_keys=True)),
+                mp_mapped_array.stats(column="g2", group_by=group_by),
+            )
+            stats_df = mp_mapped_array.stats(agg_func=None)
+            assert stats_df.shape == (4, 9)
+            pd.testing.assert_index_equal(stats_df.index, mp_mapped_array.wrapper.columns)
+            pd.testing.assert_index_equal(stats_df.columns, stats_index)
 
 
 # ############# base.py ############# #
@@ -1141,27 +1143,28 @@ class TestRecords:
         assert filtered_records["d"].count() == 0.0
 
     def test_stats(self):
-        stats_index = pd.Index(["Start", "End", "Period", "Count"], dtype="object")
-        pd.testing.assert_series_equal(
-            records.stats(),
-            pd.Series(["x", "z", pd.Timedelta("3 days 00:00:00"), 2.25], index=stats_index, name="agg_func_mean"),
-        )
-        pd.testing.assert_series_equal(
-            records.stats(column="a"),
-            pd.Series(["x", "z", pd.Timedelta("3 days 00:00:00"), 3], index=stats_index, name="a"),
-        )
-        pd.testing.assert_series_equal(
-            records.stats(column="g1", group_by=group_by),
-            pd.Series(["x", "z", pd.Timedelta("3 days 00:00:00"), 6], index=stats_index, name="g1"),
-        )
-        pd.testing.assert_series_equal(records["c"].stats(), records.stats(column="c"))
-        pd.testing.assert_series_equal(records["c"].stats(), records.stats(column="c", group_by=False))
-        pd.testing.assert_series_equal(records_grouped["g2"].stats(), records_grouped.stats(column="g2"))
-        pd.testing.assert_series_equal(records_grouped["g2"].stats(), records.stats(column="g2", group_by=group_by))
-        stats_df = records.stats(agg_func=None)
-        assert stats_df.shape == (4, 4)
-        pd.testing.assert_index_equal(stats_df.index, records.wrapper.columns)
-        pd.testing.assert_index_equal(stats_df.columns, stats_index)
+        with pytest.warns(UserWarning, match='Object has multiple columns|Metric .* returned multiple values|Metric .* requires benchmark_rets|Changing the (mapping|frequency|year frequency) will create a copy|Metric .* does not support grouped data|Metric .* raised an exception'):
+            stats_index = pd.Index(["Start", "End", "Period", "Count"], dtype="object")
+            pd.testing.assert_series_equal(
+                records.stats(),
+                pd.Series(["x", "z", pd.Timedelta("3 days 00:00:00"), 2.25], index=stats_index, name="agg_func_mean"),
+            )
+            pd.testing.assert_series_equal(
+                records.stats(column="a"),
+                pd.Series(["x", "z", pd.Timedelta("3 days 00:00:00"), 3], index=stats_index, name="a"),
+            )
+            pd.testing.assert_series_equal(
+                records.stats(column="g1", group_by=group_by),
+                pd.Series(["x", "z", pd.Timedelta("3 days 00:00:00"), 6], index=stats_index, name="g1"),
+            )
+            pd.testing.assert_series_equal(records["c"].stats(), records.stats(column="c"))
+            pd.testing.assert_series_equal(records["c"].stats(), records.stats(column="c", group_by=False))
+            pd.testing.assert_series_equal(records_grouped["g2"].stats(), records_grouped.stats(column="g2"))
+            pd.testing.assert_series_equal(records_grouped["g2"].stats(), records.stats(column="g2", group_by=group_by))
+            stats_df = records.stats(agg_func=None)
+            assert stats_df.shape == (4, 4)
+            pd.testing.assert_index_equal(stats_df.index, records.wrapper.columns)
+            pd.testing.assert_index_equal(stats_df.columns, stats_index)
 
 
 # ############# ranges.py ############# #
@@ -1314,90 +1317,91 @@ class TestRanges:
         )
 
     def test_stats(self):
-        stats_index = pd.Index(
-            [
-                "Start",
-                "End",
-                "Period",
-                "Coverage",
-                "Overlap Coverage",
-                "Total Records",
-                "Duration: Min",
-                "Duration: Median",
-                "Duration: Max",
-                "Duration: Mean",
-                "Duration: Std",
-            ],
-            dtype="object",
-        )
-        pd.testing.assert_series_equal(
-            ranges.stats(),
-            pd.Series(
+        with pytest.warns(UserWarning, match='Object has multiple columns|Metric .* returned multiple values|Metric .* requires benchmark_rets|Changing the (mapping|frequency|year frequency) will create a copy|Metric .* does not support grouped data|Metric .* raised an exception'):
+            stats_index = pd.Index(
                 [
-                    pd.Timestamp("2020-01-01 00:00:00"),
-                    pd.Timestamp("2020-01-06 00:00:00"),
-                    pd.Timedelta("6 days 00:00:00"),
-                    pd.Timedelta("3 days 00:00:00"),
-                    pd.Timedelta("0 days 00:00:00"),
-                    1.25,
-                    pd.Timedelta("2 days 08:00:00"),
-                    pd.Timedelta("2 days 08:00:00"),
-                    pd.Timedelta("2 days 08:00:00"),
-                    pd.Timedelta("2 days 08:00:00"),
-                    pd.Timedelta("0 days 00:00:00"),
+                    "Start",
+                    "End",
+                    "Period",
+                    "Coverage",
+                    "Overlap Coverage",
+                    "Total Records",
+                    "Duration: Min",
+                    "Duration: Median",
+                    "Duration: Max",
+                    "Duration: Mean",
+                    "Duration: Std",
                 ],
-                index=stats_index,
-                name="agg_func_mean",
-            ),
-        )
-        pd.testing.assert_series_equal(
-            ranges.stats(column="a"),
-            pd.Series(
-                [
-                    pd.Timestamp("2020-01-01 00:00:00"),
-                    pd.Timestamp("2020-01-06 00:00:00"),
-                    pd.Timedelta("6 days 00:00:00"),
-                    pd.Timedelta("3 days 00:00:00"),
-                    pd.Timedelta("0 days 00:00:00"),
-                    3,
-                    pd.Timedelta("1 days 00:00:00"),
-                    pd.Timedelta("1 days 00:00:00"),
-                    pd.Timedelta("1 days 00:00:00"),
-                    pd.Timedelta("1 days 00:00:00"),
-                    pd.Timedelta("0 days 00:00:00"),
-                ],
-                index=stats_index,
-                name="a",
-            ),
-        )
-        pd.testing.assert_series_equal(
-            ranges.stats(column="g1", group_by=group_by),
-            pd.Series(
-                [
-                    pd.Timestamp("2020-01-01 00:00:00"),
-                    pd.Timestamp("2020-01-06 00:00:00"),
-                    pd.Timedelta("6 days 00:00:00"),
-                    pd.Timedelta("5 days 00:00:00"),
-                    pd.Timedelta("1 days 00:00:00"),
-                    4,
-                    pd.Timedelta("1 days 00:00:00"),
-                    pd.Timedelta("1 days 00:00:00"),
-                    pd.Timedelta("3 days 00:00:00"),
-                    pd.Timedelta("1 days 12:00:00"),
-                    pd.Timedelta("1 days 00:00:00"),
-                ],
-                index=stats_index,
-                name="g1",
-            ),
-        )
-        pd.testing.assert_series_equal(ranges["c"].stats(), ranges.stats(column="c"))
-        pd.testing.assert_series_equal(ranges["c"].stats(), ranges.stats(column="c", group_by=False))
-        pd.testing.assert_series_equal(ranges_grouped["g2"].stats(), ranges_grouped.stats(column="g2"))
-        pd.testing.assert_series_equal(ranges_grouped["g2"].stats(), ranges.stats(column="g2", group_by=group_by))
-        stats_df = ranges.stats(agg_func=None)
-        assert stats_df.shape == (4, 11)
-        pd.testing.assert_index_equal(stats_df.index, ranges.wrapper.columns)
-        pd.testing.assert_index_equal(stats_df.columns, stats_index)
+                dtype="object",
+            )
+            pd.testing.assert_series_equal(
+                ranges.stats(),
+                pd.Series(
+                    [
+                        pd.Timestamp("2020-01-01 00:00:00"),
+                        pd.Timestamp("2020-01-06 00:00:00"),
+                        pd.Timedelta("6 days 00:00:00"),
+                        pd.Timedelta("3 days 00:00:00"),
+                        pd.Timedelta("0 days 00:00:00"),
+                        1.25,
+                        pd.Timedelta("2 days 08:00:00"),
+                        pd.Timedelta("2 days 08:00:00"),
+                        pd.Timedelta("2 days 08:00:00"),
+                        pd.Timedelta("2 days 08:00:00"),
+                        pd.Timedelta("0 days 00:00:00"),
+                    ],
+                    index=stats_index,
+                    name="agg_func_mean",
+                ),
+            )
+            pd.testing.assert_series_equal(
+                ranges.stats(column="a"),
+                pd.Series(
+                    [
+                        pd.Timestamp("2020-01-01 00:00:00"),
+                        pd.Timestamp("2020-01-06 00:00:00"),
+                        pd.Timedelta("6 days 00:00:00"),
+                        pd.Timedelta("3 days 00:00:00"),
+                        pd.Timedelta("0 days 00:00:00"),
+                        3,
+                        pd.Timedelta("1 days 00:00:00"),
+                        pd.Timedelta("1 days 00:00:00"),
+                        pd.Timedelta("1 days 00:00:00"),
+                        pd.Timedelta("1 days 00:00:00"),
+                        pd.Timedelta("0 days 00:00:00"),
+                    ],
+                    index=stats_index,
+                    name="a",
+                ),
+            )
+            pd.testing.assert_series_equal(
+                ranges.stats(column="g1", group_by=group_by),
+                pd.Series(
+                    [
+                        pd.Timestamp("2020-01-01 00:00:00"),
+                        pd.Timestamp("2020-01-06 00:00:00"),
+                        pd.Timedelta("6 days 00:00:00"),
+                        pd.Timedelta("5 days 00:00:00"),
+                        pd.Timedelta("1 days 00:00:00"),
+                        4,
+                        pd.Timedelta("1 days 00:00:00"),
+                        pd.Timedelta("1 days 00:00:00"),
+                        pd.Timedelta("3 days 00:00:00"),
+                        pd.Timedelta("1 days 12:00:00"),
+                        pd.Timedelta("1 days 00:00:00"),
+                    ],
+                    index=stats_index,
+                    name="g1",
+                ),
+            )
+            pd.testing.assert_series_equal(ranges["c"].stats(), ranges.stats(column="c"))
+            pd.testing.assert_series_equal(ranges["c"].stats(), ranges.stats(column="c", group_by=False))
+            pd.testing.assert_series_equal(ranges_grouped["g2"].stats(), ranges_grouped.stats(column="g2"))
+            pd.testing.assert_series_equal(ranges_grouped["g2"].stats(), ranges.stats(column="g2", group_by=group_by))
+            stats_df = ranges.stats(agg_func=None)
+            assert stats_df.shape == (4, 11)
+            pd.testing.assert_index_equal(stats_df.index, ranges.wrapper.columns)
+            pd.testing.assert_index_equal(stats_df.columns, stats_index)
 
 
 # ############# drawdowns.py ############# #
@@ -1727,7 +1731,7 @@ class TestDrawdowns:
             drawdowns_grouped.active_drawdown()
 
     def test_active_duration(self):
-        assert drawdowns["a"].active_duration() == np.timedelta64(86400000000000)
+        assert drawdowns["a"].active_duration() == np.timedelta64(86400000000000, "ns")
         pd.testing.assert_series_equal(
             drawdowns.active_duration(),
             pd.Series(
@@ -1768,175 +1772,176 @@ class TestDrawdowns:
             drawdowns_grouped.active_recovery_duration()
 
     def test_stats(self):
-        stats_index = pd.Index(
-            [
-                "Start",
-                "End",
-                "Period",
-                "Coverage [%]",
-                "Total Records",
-                "Total Recovered Drawdowns",
-                "Total Active Drawdowns",
-                "Active Drawdown [%]",
-                "Active Duration",
-                "Active Recovery [%]",
-                "Active Recovery Return [%]",
-                "Active Recovery Duration",
-                "Max Drawdown [%]",
-                "Avg Drawdown [%]",
-                "Max Drawdown Duration",
-                "Avg Drawdown Duration",
-                "Max Recovery Return [%]",
-                "Avg Recovery Return [%]",
-                "Max Recovery Duration",
-                "Avg Recovery Duration",
-                "Avg Recovery Duration Ratio",
-            ],
-            dtype="object",
-        )
-        pd.testing.assert_series_equal(
-            drawdowns.stats(),
-            pd.Series(
+        with pytest.warns(UserWarning, match='Object has multiple columns|Metric .* returned multiple values|Metric .* requires benchmark_rets|Changing the (mapping|frequency|year frequency) will create a copy|Metric .* does not support grouped data|Metric .* raised an exception'):
+            stats_index = pd.Index(
                 [
-                    pd.Timestamp("2020-01-01 00:00:00"),
-                    pd.Timestamp("2020-01-06 00:00:00"),
-                    pd.Timedelta("6 days 00:00:00"),
-                    44.444444444444436,
-                    1.5,
-                    1.0,
-                    0.5,
-                    54.166666666666664,
-                    pd.Timedelta("2 days 00:00:00"),
-                    25.0,
-                    50.0,
-                    pd.Timedelta("0 days 12:00:00"),
-                    66.66666666666666,
-                    58.33333333333333,
-                    pd.Timedelta("1 days 00:00:00"),
-                    pd.Timedelta("1 days 00:00:00"),
-                    300.0,
-                    250.0,
-                    pd.Timedelta("1 days 00:00:00"),
-                    pd.Timedelta("1 days 00:00:00"),
-                    1.0,
+                    "Start",
+                    "End",
+                    "Period",
+                    "Coverage [%]",
+                    "Total Records",
+                    "Total Recovered Drawdowns",
+                    "Total Active Drawdowns",
+                    "Active Drawdown [%]",
+                    "Active Duration",
+                    "Active Recovery [%]",
+                    "Active Recovery Return [%]",
+                    "Active Recovery Duration",
+                    "Max Drawdown [%]",
+                    "Avg Drawdown [%]",
+                    "Max Drawdown Duration",
+                    "Avg Drawdown Duration",
+                    "Max Recovery Return [%]",
+                    "Avg Recovery Return [%]",
+                    "Max Recovery Duration",
+                    "Avg Recovery Duration",
+                    "Avg Recovery Duration Ratio",
                 ],
-                index=stats_index,
-                name="agg_func_mean",
-            ),
-        )
-        pd.testing.assert_series_equal(
-            drawdowns.stats(settings=dict(incl_active=True)),
-            pd.Series(
-                [
-                    pd.Timestamp("2020-01-01 00:00:00"),
-                    pd.Timestamp("2020-01-06 00:00:00"),
-                    pd.Timedelta("6 days 00:00:00"),
-                    44.444444444444436,
-                    1.5,
-                    1.0,
-                    0.5,
-                    54.166666666666664,
-                    pd.Timedelta("2 days 00:00:00"),
-                    25.0,
-                    50.0,
-                    pd.Timedelta("0 days 12:00:00"),
-                    69.44444444444444,
-                    62.962962962962955,
-                    pd.Timedelta("1 days 16:00:00"),
-                    pd.Timedelta("1 days 16:00:00"),
-                    300.0,
-                    250.0,
-                    pd.Timedelta("1 days 00:00:00"),
-                    pd.Timedelta("1 days 00:00:00"),
-                    1.0,
-                ],
-                index=stats_index,
-                name="agg_func_mean",
-            ),
-        )
-        pd.testing.assert_series_equal(
-            drawdowns.stats(column="a"),
-            pd.Series(
-                [
-                    pd.Timestamp("2020-01-01 00:00:00"),
-                    pd.Timestamp("2020-01-06 00:00:00"),
-                    pd.Timedelta("6 days 00:00:00"),
-                    50.0,
-                    3,
-                    2,
-                    1,
-                    75.0,
-                    pd.Timedelta("1 days 00:00:00"),
-                    0.0,
-                    0.0,
-                    pd.Timedelta("0 days 00:00:00"),
-                    66.66666666666666,
-                    58.33333333333333,
-                    pd.Timedelta("1 days 00:00:00"),
-                    pd.Timedelta("1 days 00:00:00"),
-                    300.0,
-                    250.0,
-                    pd.Timedelta("1 days 00:00:00"),
-                    pd.Timedelta("1 days 00:00:00"),
-                    1.0,
-                ],
-                index=stats_index,
-                name="a",
-            ),
-        )
-        pd.testing.assert_series_equal(
-            drawdowns.stats(column="g1", group_by=group_by),
-            pd.Series(
-                [
-                    pd.Timestamp("2020-01-01 00:00:00"),
-                    pd.Timestamp("2020-01-06 00:00:00"),
-                    pd.Timedelta("6 days 00:00:00"),
-                    41.66666666666667,
-                    5,
-                    4,
-                    1,
-                    66.66666666666666,
-                    58.33333333333333,
-                    pd.Timedelta("1 days 00:00:00"),
-                    pd.Timedelta("1 days 00:00:00"),
-                    300.0,
-                    250.0,
-                    pd.Timedelta("1 days 00:00:00"),
-                    pd.Timedelta("1 days 00:00:00"),
-                    1.0,
-                ],
-                index=pd.Index(
+                dtype="object",
+            )
+            pd.testing.assert_series_equal(
+                drawdowns.stats(),
+                pd.Series(
                     [
-                        "Start",
-                        "End",
-                        "Period",
-                        "Coverage [%]",
-                        "Total Records",
-                        "Total Recovered Drawdowns",
-                        "Total Active Drawdowns",
-                        "Max Drawdown [%]",
-                        "Avg Drawdown [%]",
-                        "Max Drawdown Duration",
-                        "Avg Drawdown Duration",
-                        "Max Recovery Return [%]",
-                        "Avg Recovery Return [%]",
-                        "Max Recovery Duration",
-                        "Avg Recovery Duration",
-                        "Avg Recovery Duration Ratio",
+                        pd.Timestamp("2020-01-01 00:00:00"),
+                        pd.Timestamp("2020-01-06 00:00:00"),
+                        pd.Timedelta("6 days 00:00:00"),
+                        44.444444444444436,
+                        1.5,
+                        1.0,
+                        0.5,
+                        54.166666666666664,
+                        pd.Timedelta("2 days 00:00:00"),
+                        25.0,
+                        50.0,
+                        pd.Timedelta("0 days 12:00:00"),
+                        66.66666666666666,
+                        58.33333333333333,
+                        pd.Timedelta("1 days 00:00:00"),
+                        pd.Timedelta("1 days 00:00:00"),
+                        300.0,
+                        250.0,
+                        pd.Timedelta("1 days 00:00:00"),
+                        pd.Timedelta("1 days 00:00:00"),
+                        1.0,
                     ],
-                    dtype="object",
+                    index=stats_index,
+                    name="agg_func_mean",
                 ),
-                name="g1",
-            ),
-        )
-        pd.testing.assert_series_equal(drawdowns["c"].stats(), drawdowns.stats(column="c"))
-        pd.testing.assert_series_equal(drawdowns["c"].stats(), drawdowns.stats(column="c", group_by=False))
-        pd.testing.assert_series_equal(drawdowns_grouped["g2"].stats(), drawdowns_grouped.stats(column="g2"))
-        pd.testing.assert_series_equal(drawdowns_grouped["g2"].stats(), drawdowns.stats(column="g2", group_by=group_by))
-        stats_df = drawdowns.stats(agg_func=None)
-        assert stats_df.shape == (4, 21)
-        pd.testing.assert_index_equal(stats_df.index, drawdowns.wrapper.columns)
-        pd.testing.assert_index_equal(stats_df.columns, stats_index)
+            )
+            pd.testing.assert_series_equal(
+                drawdowns.stats(settings=dict(incl_active=True)),
+                pd.Series(
+                    [
+                        pd.Timestamp("2020-01-01 00:00:00"),
+                        pd.Timestamp("2020-01-06 00:00:00"),
+                        pd.Timedelta("6 days 00:00:00"),
+                        44.444444444444436,
+                        1.5,
+                        1.0,
+                        0.5,
+                        54.166666666666664,
+                        pd.Timedelta("2 days 00:00:00"),
+                        25.0,
+                        50.0,
+                        pd.Timedelta("0 days 12:00:00"),
+                        69.44444444444444,
+                        62.962962962962955,
+                        pd.Timedelta("1 days 16:00:00"),
+                        pd.Timedelta("1 days 16:00:00"),
+                        300.0,
+                        250.0,
+                        pd.Timedelta("1 days 00:00:00"),
+                        pd.Timedelta("1 days 00:00:00"),
+                        1.0,
+                    ],
+                    index=stats_index,
+                    name="agg_func_mean",
+                ),
+            )
+            pd.testing.assert_series_equal(
+                drawdowns.stats(column="a"),
+                pd.Series(
+                    [
+                        pd.Timestamp("2020-01-01 00:00:00"),
+                        pd.Timestamp("2020-01-06 00:00:00"),
+                        pd.Timedelta("6 days 00:00:00"),
+                        50.0,
+                        3,
+                        2,
+                        1,
+                        75.0,
+                        pd.Timedelta("1 days 00:00:00"),
+                        0.0,
+                        0.0,
+                        pd.Timedelta("0 days 00:00:00"),
+                        66.66666666666666,
+                        58.33333333333333,
+                        pd.Timedelta("1 days 00:00:00"),
+                        pd.Timedelta("1 days 00:00:00"),
+                        300.0,
+                        250.0,
+                        pd.Timedelta("1 days 00:00:00"),
+                        pd.Timedelta("1 days 00:00:00"),
+                        1.0,
+                    ],
+                    index=stats_index,
+                    name="a",
+                ),
+            )
+            pd.testing.assert_series_equal(
+                drawdowns.stats(column="g1", group_by=group_by),
+                pd.Series(
+                    [
+                        pd.Timestamp("2020-01-01 00:00:00"),
+                        pd.Timestamp("2020-01-06 00:00:00"),
+                        pd.Timedelta("6 days 00:00:00"),
+                        41.66666666666667,
+                        5,
+                        4,
+                        1,
+                        66.66666666666666,
+                        58.33333333333333,
+                        pd.Timedelta("1 days 00:00:00"),
+                        pd.Timedelta("1 days 00:00:00"),
+                        300.0,
+                        250.0,
+                        pd.Timedelta("1 days 00:00:00"),
+                        pd.Timedelta("1 days 00:00:00"),
+                        1.0,
+                    ],
+                    index=pd.Index(
+                        [
+                            "Start",
+                            "End",
+                            "Period",
+                            "Coverage [%]",
+                            "Total Records",
+                            "Total Recovered Drawdowns",
+                            "Total Active Drawdowns",
+                            "Max Drawdown [%]",
+                            "Avg Drawdown [%]",
+                            "Max Drawdown Duration",
+                            "Avg Drawdown Duration",
+                            "Max Recovery Return [%]",
+                            "Avg Recovery Return [%]",
+                            "Max Recovery Duration",
+                            "Avg Recovery Duration",
+                            "Avg Recovery Duration Ratio",
+                        ],
+                        dtype="object",
+                    ),
+                    name="g1",
+                ),
+            )
+            pd.testing.assert_series_equal(drawdowns["c"].stats(), drawdowns.stats(column="c"))
+            pd.testing.assert_series_equal(drawdowns["c"].stats(), drawdowns.stats(column="c", group_by=False))
+            pd.testing.assert_series_equal(drawdowns_grouped["g2"].stats(), drawdowns_grouped.stats(column="g2"))
+            pd.testing.assert_series_equal(drawdowns_grouped["g2"].stats(), drawdowns.stats(column="g2", group_by=group_by))
+            stats_df = drawdowns.stats(agg_func=None)
+            assert stats_df.shape == (4, 21)
+            pd.testing.assert_index_equal(stats_df.index, drawdowns.wrapper.columns)
+            pd.testing.assert_index_equal(stats_df.columns, stats_index)
 
 
 # ############# orders.py ############# #
@@ -2218,122 +2223,123 @@ class TestOrders:
         )
 
     def test_stats(self):
-        stats_index = pd.Index(
-            [
-                "Start",
-                "End",
-                "Period",
-                "Total Records",
-                "Total Buy Orders",
-                "Total Sell Orders",
-                "Min Size",
-                "Max Size",
-                "Avg Size",
-                "Avg Buy Size",
-                "Avg Sell Size",
-                "Avg Buy Price",
-                "Avg Sell Price",
-                "Total Fees",
-                "Min Fees",
-                "Max Fees",
-                "Avg Fees",
-                "Avg Buy Fees",
-                "Avg Sell Fees",
-            ],
-            dtype="object",
-        )
-        pd.testing.assert_series_equal(
-            orders.stats(),
-            pd.Series(
+        with pytest.warns(UserWarning, match='Object has multiple columns|Metric .* returned multiple values|Metric .* requires benchmark_rets|Changing the (mapping|frequency|year frequency) will create a copy|Metric .* does not support grouped data|Metric .* raised an exception'):
+            stats_index = pd.Index(
                 [
-                    pd.Timestamp("2020-01-01 00:00:00"),
-                    pd.Timestamp("2020-01-08 00:00:00"),
-                    pd.Timedelta("8 days 00:00:00"),
-                    5.25,
-                    2.75,
-                    2.5,
-                    0.10000000000000002,
-                    2.0,
-                    0.9333333333333335,
-                    0.9166666666666666,
-                    0.9194444444444446,
-                    4.388888888888889,
-                    4.527777777777779,
-                    0.26949999999999996,
-                    0.002,
-                    0.16,
-                    0.051333333333333335,
-                    0.050222222222222224,
-                    0.050222222222222224,
+                    "Start",
+                    "End",
+                    "Period",
+                    "Total Records",
+                    "Total Buy Orders",
+                    "Total Sell Orders",
+                    "Min Size",
+                    "Max Size",
+                    "Avg Size",
+                    "Avg Buy Size",
+                    "Avg Sell Size",
+                    "Avg Buy Price",
+                    "Avg Sell Price",
+                    "Total Fees",
+                    "Min Fees",
+                    "Max Fees",
+                    "Avg Fees",
+                    "Avg Buy Fees",
+                    "Avg Sell Fees",
                 ],
-                index=stats_index,
-                name="agg_func_mean",
-            ),
-        )
-        pd.testing.assert_series_equal(
-            orders.stats(column="a"),
-            pd.Series(
-                [
-                    pd.Timestamp("2020-01-01 00:00:00"),
-                    pd.Timestamp("2020-01-08 00:00:00"),
-                    pd.Timedelta("8 days 00:00:00"),
-                    7,
-                    4,
-                    3,
-                    0.1,
-                    2.0,
-                    0.8857142857142858,
-                    1.025,
-                    0.7000000000000001,
-                    4.25,
-                    4.666666666666667,
-                    0.33599999999999997,
-                    0.002,
-                    0.16,
-                    0.047999999999999994,
-                    0.057999999999999996,
-                    0.03466666666666667,
-                ],
-                index=stats_index,
-                name="a",
-            ),
-        )
-        pd.testing.assert_series_equal(
-            orders.stats(column="g1", group_by=group_by),
-            pd.Series(
-                [
-                    pd.Timestamp("2020-01-01 00:00:00"),
-                    pd.Timestamp("2020-01-08 00:00:00"),
-                    pd.Timedelta("8 days 00:00:00"),
-                    14,
-                    7,
-                    7,
-                    0.1,
-                    2.0,
-                    0.8857142857142858,
-                    0.8857142857142856,
-                    0.8857142857142858,
-                    4.428571428571429,
-                    4.428571428571429,
-                    0.672,
-                    0.002,
-                    0.16,
-                    0.048,
-                    0.048,
-                    0.047999999999999994,
-                ],
-                index=stats_index,
-                name="g1",
-            ),
-        )
-        pd.testing.assert_series_equal(orders["c"].stats(), orders.stats(column="c"))
-        pd.testing.assert_series_equal(orders["c"].stats(), orders.stats(column="c", group_by=False))
-        pd.testing.assert_series_equal(orders_grouped["g2"].stats(), orders_grouped.stats(column="g2"))
-        pd.testing.assert_series_equal(orders_grouped["g2"].stats(), orders.stats(column="g2", group_by=group_by))
-        stats_df = orders.stats(agg_func=None)
-        assert stats_df.shape == (4, 19)
-        pd.testing.assert_index_equal(stats_df.index, orders.wrapper.columns)
-        pd.testing.assert_index_equal(stats_df.columns, stats_index)
+                dtype="object",
+            )
+            pd.testing.assert_series_equal(
+                orders.stats(),
+                pd.Series(
+                    [
+                        pd.Timestamp("2020-01-01 00:00:00"),
+                        pd.Timestamp("2020-01-08 00:00:00"),
+                        pd.Timedelta("8 days 00:00:00"),
+                        5.25,
+                        2.75,
+                        2.5,
+                        0.10000000000000002,
+                        2.0,
+                        0.9333333333333335,
+                        0.9166666666666666,
+                        0.9194444444444446,
+                        4.388888888888889,
+                        4.527777777777779,
+                        0.26949999999999996,
+                        0.002,
+                        0.16,
+                        0.051333333333333335,
+                        0.050222222222222224,
+                        0.050222222222222224,
+                    ],
+                    index=stats_index,
+                    name="agg_func_mean",
+                ),
+            )
+            pd.testing.assert_series_equal(
+                orders.stats(column="a"),
+                pd.Series(
+                    [
+                        pd.Timestamp("2020-01-01 00:00:00"),
+                        pd.Timestamp("2020-01-08 00:00:00"),
+                        pd.Timedelta("8 days 00:00:00"),
+                        7,
+                        4,
+                        3,
+                        0.1,
+                        2.0,
+                        0.8857142857142858,
+                        1.025,
+                        0.7000000000000001,
+                        4.25,
+                        4.666666666666667,
+                        0.33599999999999997,
+                        0.002,
+                        0.16,
+                        0.047999999999999994,
+                        0.057999999999999996,
+                        0.03466666666666667,
+                    ],
+                    index=stats_index,
+                    name="a",
+                ),
+            )
+            pd.testing.assert_series_equal(
+                orders.stats(column="g1", group_by=group_by),
+                pd.Series(
+                    [
+                        pd.Timestamp("2020-01-01 00:00:00"),
+                        pd.Timestamp("2020-01-08 00:00:00"),
+                        pd.Timedelta("8 days 00:00:00"),
+                        14,
+                        7,
+                        7,
+                        0.1,
+                        2.0,
+                        0.8857142857142858,
+                        0.8857142857142856,
+                        0.8857142857142858,
+                        4.428571428571429,
+                        4.428571428571429,
+                        0.672,
+                        0.002,
+                        0.16,
+                        0.048,
+                        0.048,
+                        0.047999999999999994,
+                    ],
+                    index=stats_index,
+                    name="g1",
+                ),
+            )
+            pd.testing.assert_series_equal(orders["c"].stats(), orders.stats(column="c"))
+            pd.testing.assert_series_equal(orders["c"].stats(), orders.stats(column="c", group_by=False))
+            pd.testing.assert_series_equal(orders_grouped["g2"].stats(), orders_grouped.stats(column="g2"))
+            pd.testing.assert_series_equal(orders_grouped["g2"].stats(), orders.stats(column="g2", group_by=group_by))
+            stats_df = orders.stats(agg_func=None)
+            assert stats_df.shape == (4, 19)
+            pd.testing.assert_index_equal(stats_df.index, orders.wrapper.columns)
+            pd.testing.assert_index_equal(stats_df.columns, stats_index)
 
 
 # ############# trades.py ############# #
@@ -2818,178 +2824,17 @@ class TestExitTrades:
         )
 
     def test_stats(self):
-        stats_index = pd.Index(
-            [
-                "Start",
-                "End",
-                "Period",
-                "First Trade Start",
-                "Last Trade End",
-                "Coverage",
-                "Overlap Coverage",
-                "Total Records",
-                "Total Long Trades",
-                "Total Short Trades",
-                "Total Closed Trades",
-                "Total Open Trades",
-                "Open Trade PnL",
-                "Win Rate [%]",
-                "Max Win Streak",
-                "Max Loss Streak",
-                "Best Trade [%]",
-                "Worst Trade [%]",
-                "Avg Winning Trade [%]",
-                "Avg Losing Trade [%]",
-                "Avg Winning Trade Duration",
-                "Avg Losing Trade Duration",
-                "Profit Factor",
-                "Expectancy",
-                "SQN",
-            ],
-            dtype="object",
-        )
-        pd.testing.assert_series_equal(
-            exit_trades.stats(),
-            pd.Series(
+        with pytest.warns(UserWarning, match='Object has multiple columns|Metric .* returned multiple values|Metric .* requires benchmark_rets|Changing the (mapping|frequency|year frequency) will create a copy|Metric .* does not support grouped data|Metric .* raised an exception'):
+            stats_index = pd.Index(
                 [
-                    pd.Timestamp("2020-01-01 00:00:00"),
-                    pd.Timestamp("2020-01-08 00:00:00"),
-                    pd.Timedelta("8 days 00:00:00"),
-                    pd.Timestamp("2020-01-01 00:00:00"),
-                    pd.Timestamp("2020-01-08 00:00:00"),
-                    pd.Timedelta("5 days 08:00:00"),
-                    pd.Timedelta("2 days 00:00:00"),
-                    3.25,
-                    2.0,
-                    1.25,
-                    2.5,
-                    0.75,
-                    -0.1,
-                    58.333333333333336,
-                    2.0,
-                    1.3333333333333333,
-                    168.38888888888889,
-                    -91.08730158730158,
-                    149.25,
-                    -86.3670634920635,
-                    pd.Timedelta("2 days 00:00:00"),
-                    pd.Timedelta("1 days 12:00:00"),
-                    np.inf,
-                    0.11705555555555548,
-                    0.18931590012681135,
-                ],
-                index=stats_index,
-                name="agg_func_mean",
-            ),
-        )
-        pd.testing.assert_series_equal(
-            exit_trades.stats(settings=dict(incl_open=True)),
-            pd.Series(
-                [
-                    pd.Timestamp("2020-01-01 00:00:00"),
-                    pd.Timestamp("2020-01-08 00:00:00"),
-                    pd.Timedelta("8 days 00:00:00"),
-                    pd.Timestamp("2020-01-01 00:00:00"),
-                    pd.Timestamp("2020-01-08 00:00:00"),
-                    pd.Timedelta("5 days 08:00:00"),
-                    pd.Timedelta("2 days 00:00:00"),
-                    3.25,
-                    2.0,
-                    1.25,
-                    2.5,
-                    0.75,
-                    -0.1,
-                    58.333333333333336,
-                    2.0,
-                    2.3333333333333335,
-                    174.33333333333334,
-                    -96.25396825396825,
-                    149.25,
-                    -42.39781746031746,
-                    pd.Timedelta("2 days 00:00:00"),
-                    pd.Timedelta("1 days 06:00:00"),
-                    7.11951219512195,
-                    0.06359999999999993,
-                    0.07356215977397455,
-                ],
-                index=stats_index,
-                name="agg_func_mean",
-            ),
-        )
-        pd.testing.assert_series_equal(
-            exit_trades.stats(column="a"),
-            pd.Series(
-                [
-                    pd.Timestamp("2020-01-01 00:00:00"),
-                    pd.Timestamp("2020-01-08 00:00:00"),
-                    pd.Timedelta("8 days 00:00:00"),
-                    pd.Timestamp("2020-01-01 00:00:00"),
-                    pd.Timestamp("2020-01-08 00:00:00"),
-                    pd.Timedelta("5 days 00:00:00"),
-                    pd.Timedelta("2 days 00:00:00"),
-                    4,
-                    4,
-                    0,
-                    3,
-                    1,
-                    -0.16,
-                    100.0,
-                    3,
-                    0,
-                    262.0,
-                    14.499999999999998,
-                    149.25,
-                    np.nan,
-                    pd.Timedelta("2 days 00:00:00"),
-                    pd.NaT,
-                    np.inf,
-                    1.008,
-                    2.181955050824476,
-                ],
-                index=stats_index,
-                name="a",
-            ),
-        )
-        pd.testing.assert_series_equal(
-            exit_trades.stats(column="g1", group_by=group_by),
-            pd.Series(
-                [
-                    pd.Timestamp("2020-01-01 00:00:00"),
-                    pd.Timestamp("2020-01-08 00:00:00"),
-                    pd.Timedelta("8 days 00:00:00"),
-                    pd.Timestamp("2020-01-01 00:00:00"),
-                    pd.Timestamp("2020-01-08 00:00:00"),
-                    pd.Timedelta("5 days 00:00:00"),
-                    pd.Timedelta("5 days 00:00:00"),
-                    8,
-                    4,
-                    4,
-                    6,
-                    2,
-                    -0.32,
-                    50.0,
-                    3,
-                    3,
-                    262.0,
-                    -271.3333333333333,
-                    149.25,
-                    -156.30555555555557,
-                    pd.Timedelta("2 days 00:00:00"),
-                    pd.Timedelta("2 days 00:00:00"),
-                    0.895734597156398,
-                    -0.058666666666666756,
-                    -0.10439051512510047,
-                ],
-                index=stats_index,
-                name="g1",
-            ),
-        )
-        pd.testing.assert_index_equal(
-            exit_trades.stats(tags="trades").index,
-            pd.Index(
-                [
+                    "Start",
+                    "End",
+                    "Period",
                     "First Trade Start",
                     "Last Trade End",
+                    "Coverage",
+                    "Overlap Coverage",
+                    "Total Records",
                     "Total Long Trades",
                     "Total Short Trades",
                     "Total Closed Trades",
@@ -3009,18 +2854,180 @@ class TestExitTrades:
                     "SQN",
                 ],
                 dtype="object",
-            ),
-        )
-        pd.testing.assert_series_equal(exit_trades["c"].stats(), exit_trades.stats(column="c"))
-        pd.testing.assert_series_equal(exit_trades["c"].stats(), exit_trades.stats(column="c", group_by=False))
-        pd.testing.assert_series_equal(exit_trades_grouped["g2"].stats(), exit_trades_grouped.stats(column="g2"))
-        pd.testing.assert_series_equal(
-            exit_trades_grouped["g2"].stats(), exit_trades.stats(column="g2", group_by=group_by)
-        )
-        stats_df = exit_trades.stats(agg_func=None)
-        assert stats_df.shape == (4, 25)
-        pd.testing.assert_index_equal(stats_df.index, exit_trades.wrapper.columns)
-        pd.testing.assert_index_equal(stats_df.columns, stats_index)
+            )
+            pd.testing.assert_series_equal(
+                exit_trades.stats(),
+                pd.Series(
+                    [
+                        pd.Timestamp("2020-01-01 00:00:00"),
+                        pd.Timestamp("2020-01-08 00:00:00"),
+                        pd.Timedelta("8 days 00:00:00"),
+                        pd.Timestamp("2020-01-01 00:00:00"),
+                        pd.Timestamp("2020-01-08 00:00:00"),
+                        pd.Timedelta("5 days 08:00:00"),
+                        pd.Timedelta("2 days 00:00:00"),
+                        3.25,
+                        2.0,
+                        1.25,
+                        2.5,
+                        0.75,
+                        -0.1,
+                        58.333333333333336,
+                        2.0,
+                        1.3333333333333333,
+                        168.38888888888889,
+                        -91.08730158730158,
+                        149.25,
+                        -86.3670634920635,
+                        pd.Timedelta("2 days 00:00:00"),
+                        pd.Timedelta("1 days 12:00:00"),
+                        np.inf,
+                        0.11705555555555548,
+                        0.18931590012681135,
+                    ],
+                    index=stats_index,
+                    name="agg_func_mean",
+                ),
+            )
+            pd.testing.assert_series_equal(
+                exit_trades.stats(settings=dict(incl_open=True)),
+                pd.Series(
+                    [
+                        pd.Timestamp("2020-01-01 00:00:00"),
+                        pd.Timestamp("2020-01-08 00:00:00"),
+                        pd.Timedelta("8 days 00:00:00"),
+                        pd.Timestamp("2020-01-01 00:00:00"),
+                        pd.Timestamp("2020-01-08 00:00:00"),
+                        pd.Timedelta("5 days 08:00:00"),
+                        pd.Timedelta("2 days 00:00:00"),
+                        3.25,
+                        2.0,
+                        1.25,
+                        2.5,
+                        0.75,
+                        -0.1,
+                        58.333333333333336,
+                        2.0,
+                        2.3333333333333335,
+                        174.33333333333334,
+                        -96.25396825396825,
+                        149.25,
+                        -42.39781746031746,
+                        pd.Timedelta("2 days 00:00:00"),
+                        pd.Timedelta("1 days 06:00:00"),
+                        7.11951219512195,
+                        0.06359999999999993,
+                        0.07356215977397455,
+                    ],
+                    index=stats_index,
+                    name="agg_func_mean",
+                ),
+            )
+            pd.testing.assert_series_equal(
+                exit_trades.stats(column="a"),
+                pd.Series(
+                    [
+                        pd.Timestamp("2020-01-01 00:00:00"),
+                        pd.Timestamp("2020-01-08 00:00:00"),
+                        pd.Timedelta("8 days 00:00:00"),
+                        pd.Timestamp("2020-01-01 00:00:00"),
+                        pd.Timestamp("2020-01-08 00:00:00"),
+                        pd.Timedelta("5 days 00:00:00"),
+                        pd.Timedelta("2 days 00:00:00"),
+                        4,
+                        4,
+                        0,
+                        3,
+                        1,
+                        -0.16,
+                        100.0,
+                        3,
+                        0,
+                        262.0,
+                        14.499999999999998,
+                        149.25,
+                        np.nan,
+                        pd.Timedelta("2 days 00:00:00"),
+                        pd.NaT,
+                        np.inf,
+                        1.008,
+                        2.181955050824476,
+                    ],
+                    index=stats_index,
+                    name="a",
+                ),
+            )
+            pd.testing.assert_series_equal(
+                exit_trades.stats(column="g1", group_by=group_by),
+                pd.Series(
+                    [
+                        pd.Timestamp("2020-01-01 00:00:00"),
+                        pd.Timestamp("2020-01-08 00:00:00"),
+                        pd.Timedelta("8 days 00:00:00"),
+                        pd.Timestamp("2020-01-01 00:00:00"),
+                        pd.Timestamp("2020-01-08 00:00:00"),
+                        pd.Timedelta("5 days 00:00:00"),
+                        pd.Timedelta("5 days 00:00:00"),
+                        8,
+                        4,
+                        4,
+                        6,
+                        2,
+                        -0.32,
+                        50.0,
+                        3,
+                        3,
+                        262.0,
+                        -271.3333333333333,
+                        149.25,
+                        -156.30555555555557,
+                        pd.Timedelta("2 days 00:00:00"),
+                        pd.Timedelta("2 days 00:00:00"),
+                        0.895734597156398,
+                        -0.058666666666666756,
+                        -0.10439051512510047,
+                    ],
+                    index=stats_index,
+                    name="g1",
+                ),
+            )
+            pd.testing.assert_index_equal(
+                exit_trades.stats(tags="trades").index,
+                pd.Index(
+                    [
+                        "First Trade Start",
+                        "Last Trade End",
+                        "Total Long Trades",
+                        "Total Short Trades",
+                        "Total Closed Trades",
+                        "Total Open Trades",
+                        "Open Trade PnL",
+                        "Win Rate [%]",
+                        "Max Win Streak",
+                        "Max Loss Streak",
+                        "Best Trade [%]",
+                        "Worst Trade [%]",
+                        "Avg Winning Trade [%]",
+                        "Avg Losing Trade [%]",
+                        "Avg Winning Trade Duration",
+                        "Avg Losing Trade Duration",
+                        "Profit Factor",
+                        "Expectancy",
+                        "SQN",
+                    ],
+                    dtype="object",
+                ),
+            )
+            pd.testing.assert_series_equal(exit_trades["c"].stats(), exit_trades.stats(column="c"))
+            pd.testing.assert_series_equal(exit_trades["c"].stats(), exit_trades.stats(column="c", group_by=False))
+            pd.testing.assert_series_equal(exit_trades_grouped["g2"].stats(), exit_trades_grouped.stats(column="g2"))
+            pd.testing.assert_series_equal(
+                exit_trades_grouped["g2"].stats(), exit_trades.stats(column="g2", group_by=group_by)
+            )
+            stats_df = exit_trades.stats(agg_func=None)
+            assert stats_df.shape == (4, 25)
+            pd.testing.assert_index_equal(stats_df.index, exit_trades.wrapper.columns)
+            pd.testing.assert_index_equal(stats_df.columns, stats_index)
 
 
 entry_trades = vbt.EntryTrades.from_orders(orders)
@@ -4638,86 +4645,87 @@ class TestLogs:
         )
 
     def test_stats(self):
-        stats_index = pd.Index(
-            [
-                "Start",
-                "End",
-                "Period",
-                "Total Records",
-                "Status Counts: None",
-                "Status Counts: Filled",
-                "Status Counts: Ignored",
-                "Status Counts: Rejected",
-                "Status Info Counts: None",
-                "Status Info Counts: SizeNaN",
-            ],
-            dtype="object",
-        )
-        pd.testing.assert_series_equal(
-            logs.stats(),
-            pd.Series(
+        with pytest.warns(UserWarning, match='Object has multiple columns|Metric .* returned multiple values|Metric .* requires benchmark_rets|Changing the (mapping|frequency|year frequency) will create a copy|Metric .* does not support grouped data|Metric .* raised an exception'):
+            stats_index = pd.Index(
                 [
-                    pd.Timestamp("2020-01-01 00:00:00"),
-                    pd.Timestamp("2020-01-08 00:00:00"),
-                    pd.Timedelta("8 days 00:00:00"),
-                    8.0,
-                    0.0,
-                    5.25,
-                    2.75,
-                    0.0,
-                    5.25,
-                    2.75,
+                    "Start",
+                    "End",
+                    "Period",
+                    "Total Records",
+                    "Status Counts: None",
+                    "Status Counts: Filled",
+                    "Status Counts: Ignored",
+                    "Status Counts: Rejected",
+                    "Status Info Counts: None",
+                    "Status Info Counts: SizeNaN",
                 ],
-                index=stats_index,
-                name="agg_func_mean",
-            ),
-        )
-        pd.testing.assert_series_equal(
-            logs.stats(column="a"),
-            pd.Series(
-                [
-                    pd.Timestamp("2020-01-01 00:00:00"),
-                    pd.Timestamp("2020-01-08 00:00:00"),
-                    pd.Timedelta("8 days 00:00:00"),
-                    8,
-                    0,
-                    7,
-                    1,
-                    0,
-                    7,
-                    1,
-                ],
-                index=stats_index,
-                name="a",
-            ),
-        )
-        pd.testing.assert_series_equal(
-            logs.stats(column="g1", group_by=group_by),
-            pd.Series(
-                [
-                    pd.Timestamp("2020-01-01 00:00:00"),
-                    pd.Timestamp("2020-01-08 00:00:00"),
-                    pd.Timedelta("8 days 00:00:00"),
-                    16,
-                    0,
-                    14,
-                    2,
-                    0,
-                    14,
-                    2,
-                ],
-                index=stats_index,
-                name="g1",
-            ),
-        )
-        pd.testing.assert_series_equal(logs["c"].stats(), logs.stats(column="c"))
-        pd.testing.assert_series_equal(logs["c"].stats(), logs.stats(column="c", group_by=False))
-        pd.testing.assert_series_equal(logs_grouped["g2"].stats(), logs_grouped.stats(column="g2"))
-        pd.testing.assert_series_equal(logs_grouped["g2"].stats(), logs.stats(column="g2", group_by=group_by))
-        stats_df = logs.stats(agg_func=None)
-        assert stats_df.shape == (4, 10)
-        pd.testing.assert_index_equal(stats_df.index, logs.wrapper.columns)
-        pd.testing.assert_index_equal(stats_df.columns, stats_index)
+                dtype="object",
+            )
+            pd.testing.assert_series_equal(
+                logs.stats(),
+                pd.Series(
+                    [
+                        pd.Timestamp("2020-01-01 00:00:00"),
+                        pd.Timestamp("2020-01-08 00:00:00"),
+                        pd.Timedelta("8 days 00:00:00"),
+                        8.0,
+                        0.0,
+                        5.25,
+                        2.75,
+                        0.0,
+                        5.25,
+                        2.75,
+                    ],
+                    index=stats_index,
+                    name="agg_func_mean",
+                ),
+            )
+            pd.testing.assert_series_equal(
+                logs.stats(column="a"),
+                pd.Series(
+                    [
+                        pd.Timestamp("2020-01-01 00:00:00"),
+                        pd.Timestamp("2020-01-08 00:00:00"),
+                        pd.Timedelta("8 days 00:00:00"),
+                        8,
+                        0,
+                        7,
+                        1,
+                        0,
+                        7,
+                        1,
+                    ],
+                    index=stats_index,
+                    name="a",
+                ),
+            )
+            pd.testing.assert_series_equal(
+                logs.stats(column="g1", group_by=group_by),
+                pd.Series(
+                    [
+                        pd.Timestamp("2020-01-01 00:00:00"),
+                        pd.Timestamp("2020-01-08 00:00:00"),
+                        pd.Timedelta("8 days 00:00:00"),
+                        16,
+                        0,
+                        14,
+                        2,
+                        0,
+                        14,
+                        2,
+                    ],
+                    index=stats_index,
+                    name="g1",
+                ),
+            )
+            pd.testing.assert_series_equal(logs["c"].stats(), logs.stats(column="c"))
+            pd.testing.assert_series_equal(logs["c"].stats(), logs.stats(column="c", group_by=False))
+            pd.testing.assert_series_equal(logs_grouped["g2"].stats(), logs_grouped.stats(column="g2"))
+            pd.testing.assert_series_equal(logs_grouped["g2"].stats(), logs.stats(column="g2", group_by=group_by))
+            stats_df = logs.stats(agg_func=None)
+            assert stats_df.shape == (4, 10)
+            pd.testing.assert_index_equal(stats_df.index, logs.wrapper.columns)
+            pd.testing.assert_index_equal(stats_df.columns, stats_index)
 
     def test_count(self):
         assert logs["a"].count() == 8

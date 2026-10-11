@@ -4,6 +4,7 @@
 """Engine-neutral dispatch wrappers for indicator functions."""
 
 import numpy as np
+from numba.typed import List
 
 from vectorbt import _typing as tp
 from vectorbt._engine import (
@@ -70,7 +71,7 @@ def ma_cache(
         return ma_cache_rs(close, windows, ewms, adjust)
     from vectorbt.indicators.nb import ma_cache_nb
 
-    return ma_cache_nb(close, windows, ewms, adjust)
+    return ma_cache_nb(close, List(windows), List(ewms), adjust)
 
 
 def ma_apply(
@@ -110,7 +111,7 @@ def mstd_cache(
         return mstd_cache_rs(close, windows, ewms, adjust, ddof)
     from vectorbt.indicators.nb import mstd_cache_nb
 
-    return mstd_cache_nb(close, windows, ewms, adjust, ddof)
+    return mstd_cache_nb(close, List(windows), List(ewms), adjust, ddof)
 
 
 def mstd_apply(
@@ -152,7 +153,7 @@ def bb_cache(
         return bb_cache_rs(close, windows, ewms, alphas, adjust, ddof)
     from vectorbt.indicators.nb import bb_cache_nb
 
-    return bb_cache_nb(close, windows, ewms, alphas, adjust, ddof)
+    return bb_cache_nb(close, List(windows), List(ewms), List(alphas), adjust, ddof)
 
 
 def bb_apply(
@@ -194,7 +195,7 @@ def rsi_cache(
         return rsi_cache_rs(close, windows, ewms, adjust)
     from vectorbt.indicators.nb import rsi_cache_nb
 
-    return rsi_cache_nb(close, windows, ewms, adjust)
+    return rsi_cache_nb(close, List(windows), List(ewms), adjust)
 
 
 def rsi_apply(
@@ -247,7 +248,7 @@ def stoch_cache(
         return stoch_cache_rs(high, low, close, k_windows, d_windows, d_ewms, adjust)
     from vectorbt.indicators.nb import stoch_cache_nb
 
-    return stoch_cache_nb(high, low, close, k_windows, d_windows, d_ewms, adjust)
+    return stoch_cache_nb(high, low, close, List(k_windows), List(d_windows), List(d_ewms), adjust)
 
 
 def stoch_apply(
@@ -303,7 +304,7 @@ def macd_cache(
         return macd_cache_rs(close, fast_windows, slow_windows, signal_windows, macd_ewms, signal_ewms, adjust)
     from vectorbt.indicators.nb import macd_cache_nb
 
-    return macd_cache_nb(close, fast_windows, slow_windows, signal_windows, macd_ewms, signal_ewms, adjust)
+    return macd_cache_nb(close, List(fast_windows), List(slow_windows), List(signal_windows), List(macd_ewms), List(signal_ewms), adjust)
 
 
 def macd_apply(
@@ -396,7 +397,7 @@ def atr_cache(
         return atr_cache_rs(high, low, close, windows, ewms, adjust)
     from vectorbt.indicators.nb import atr_cache_nb
 
-    return atr_cache_nb(high, low, close, windows, ewms, adjust)
+    return atr_cache_nb(high, low, close, List(windows), List(ewms), adjust)
 
 
 def atr_apply(

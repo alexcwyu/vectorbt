@@ -1,0 +1,626 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>vectorbt -- Development Guide</title><style>
+:root{color-scheme:light dark;--bg:#f6f8fa;--paper:#fff;--fg:#182332;--muted:#526274;--line:#d9e0e7;--accent:#1769aa}
+@media(prefers-color-scheme:dark){:root{--bg:#111820;--paper:#192330;--fg:#e6edf3;--muted:#a0b3c5;--line:#344354;--accent:#71b7ee}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 system-ui,-apple-system,sans-serif}
+header{border-bottom:1px solid var(--line);padding:16px max(24px,calc((100vw - 1120px)/2));background:var(--paper);font-size:14px}
+main{max-width:1120px;margin:32px auto;padding:40px 48px;background:var(--paper);border:1px solid var(--line);border-radius:12px}
+h1,h2,h3,h4{line-height:1.3;scroll-margin-top:24px}h1{font-size:2.1rem}h2{margin-top:2.5em;border-bottom:1px solid var(--line);padding-bottom:.35em}h3{margin-top:1.8em}
+a{color:var(--accent);text-underline-offset:3px}code{font:14px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--bg);border-radius:4px;padding:2px 5px}pre{overflow:auto;border:1px solid var(--line);background:var(--bg);padding:16px;border-radius:7px}pre code{padding:0;background:none}
+table{border-collapse:collapse;width:100%;display:block;overflow-x:auto;font-size:14px}th,td{border:1px solid var(--line);padding:9px 12px;text-align:left}th{background:var(--bg)}blockquote{border-left:4px solid var(--accent);margin:16px 0;padding:4px 20px;color:var(--muted)}
+.diagram{overflow-x:auto;margin:24px 0;padding:20px;border:1px solid var(--line);border-radius:8px;background:#fff;color:#182332}.mermaid{border:0;background:none;text-align:center}.mermaid svg{height:auto;max-width:100%}details{font-size:13px;color:#526274}.headerlink{margin-left:.4em;font-size:.7em;text-decoration:none;color:var(--muted)}
+main{min-width:0;overflow-wrap:anywhere}table,pre{max-width:100%}.diagram svg{display:block}
+th,td{min-width:120px;overflow-wrap:normal}
+@media(max-width:740px){main{margin:0;padding:24px 18px;border:0;border-radius:0}h1{font-size:1.7rem}.diagram{padding:8px}}
+@media print{header,details,.headerlink{display:none}body,main{background:#fff;color:#000;border:0;margin:0;padding:0}a{color:#000}.diagram,pre{break-inside:avoid}}
+</style></head><body><header>Engineering documentation · <a href="development.md">Markdown source</a></header><main><h1 id="vectorbt-development-guide">vectorbt -- Development Guide<a class="headerlink" href="#vectorbt-development-guide" title="Permanent link">&para;</a></h1>
+<h2 id="setup">Setup<a class="headerlink" href="#setup" title="Permanent link">&para;</a></h2>
+<h3 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Python &gt;= 3.13</li>
+<li>uv (recommended) or pip</li>
+</ul>
+<h3 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h3>
+<pre><code class="language-bash">cd vectorbt
+
+# Development install with uv
+uv sync --active --all-groups --all-extras
+
+# Or with pip
+pip install -e &quot;.[full]&quot;
+
+# Without TA-Lib (avoids C dependency)
+pip install -e &quot;.[full-no-talib]&quot;
+</code></pre>
+<h3 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">&para;</a></h3>
+<p><strong>Core</strong>: numpy, pandas, scipy, matplotlib, plotly, ipywidgets, numba, dill, tqdm, dateparser, imageio, scikit-learn, schedule, requests, pytz</p>
+<p><strong>Optional (full)</strong>:
+- Data: yfinance, python-binance, ccxt, alpaca-py
+- Indicators: ta, TA-Lib
+- Distributed: ray
+- Messaging: python-telegram-bot
+- Analytics: quantstats</p>
+<h3 id="running-tests">Running Tests<a class="headerlink" href="#running-tests" title="Permanent link">&para;</a></h3>
+<pre><code class="language-bash"># All tests
+uv run pytest
+
+# With coverage
+uv run pytest --cov=vectorbt
+
+# Single test file
+uv run pytest tests/test_portfolio.py
+
+# Single test
+uv run pytest -k test_function_name
+</code></pre>
+<h3 id="linting-and-type-checking">Linting and Type Checking<a class="headerlink" href="#linting-and-type-checking" title="Permanent link">&para;</a></h3>
+<pre><code class="language-bash"># Ruff linting
+uv run ruff check src/
+
+# Ruff formatting
+uv run ruff format src/
+
+# Type checking
+uv run mypy src/vectorbt/
+</code></pre>
+<h2 id="creating-custom-indicators">Creating Custom Indicators<a class="headerlink" href="#creating-custom-indicators" title="Permanent link">&para;</a></h2>
+<h3 id="using-indicatorfactory">Using IndicatorFactory<a class="headerlink" href="#using-indicatorfactory" title="Permanent link">&para;</a></h3>
+<p>The <code>IndicatorFactory</code> provides a structured way to create indicators:</p>
+<pre><code class="language-python">import vectorbt as vbt
+import numpy as np
+from numba import njit
+
+# 1. Define the computation function (must be Numba-compiled for performance)
+@njit(cache=True)
+def custom_ma_nb(close, window):
+    &quot;&quot;&quot;Simple moving average using Numba.&quot;&quot;&quot;
+    result = np.full_like(close, np.nan)
+    for i in range(window - 1, len(close)):
+        result[i] = np.mean(close[i - window + 1:i + 1])
+    return result
+
+# 2. Create the indicator class
+CustomMA = vbt.IndicatorFactory(
+    class_name='CustomMA',
+    input_names=['close'],
+    param_names=['window'],
+    output_names=['ma']
+).with_apply_func(custom_ma_nb)
+
+# 3. Use it
+price = pd.DataFrame({'a': [1, 2, 3, 4, 5], 'b': [5, 4, 3, 2, 1]})
+ma = CustomMA.run(price, window=[2, 3])
+</code></pre>
+<h3 id="using-external-libraries">Using External Libraries<a class="headerlink" href="#using-external-libraries" title="Permanent link">&para;</a></h3>
+<pre><code class="language-python"># From TA-Lib
+RSI = vbt.indicators.talib('RSI')
+rsi = RSI.run(close, timeperiod=[7, 14])
+
+# From pandas-ta
+VWAP = vbt.indicators.pandas_ta('VWAP')
+
+# From ta library
+BB = vbt.indicators.ta('BollingerBands')
+</code></pre>
+<h3 id="indicator-with-multiple-outputs">Indicator with Multiple Outputs<a class="headerlink" href="#indicator-with-multiple-outputs" title="Permanent link">&para;</a></h3>
+<pre><code class="language-python">@njit(cache=True)
+def bb_nb(close, window, std_mult):
+    ma = np.full_like(close, np.nan)
+    upper = np.full_like(close, np.nan)
+    lower = np.full_like(close, np.nan)
+    for i in range(window - 1, len(close)):
+        w = close[i - window + 1:i + 1]
+        m = np.mean(w)
+        s = np.std(w)
+        ma[i] = m
+        upper[i] = m + std_mult * s
+        lower[i] = m - std_mult * s
+    return ma, upper, lower
+
+MyBB = vbt.IndicatorFactory(
+    class_name='MyBB',
+    input_names=['close'],
+    param_names=['window', 'std_mult'],
+    output_names=['ma', 'upper', 'lower']
+).with_apply_func(bb_nb)
+</code></pre>
+<h2 id="creating-custom-signal-generators">Creating Custom Signal Generators<a class="headerlink" href="#creating-custom-signal-generators" title="Permanent link">&para;</a></h2>
+<h3 id="using-signalfactory">Using SignalFactory<a class="headerlink" href="#using-signalfactory" title="Permanent link">&para;</a></h3>
+<pre><code class="language-python">from vectorbt.signals.factory import SignalFactory
+
+# Define entry choice function
+@njit
+def entry_choice_nb(from_i, to_i, col, close, threshold):
+    &quot;&quot;&quot;Enter when price drops by threshold from recent high.&quot;&quot;&quot;
+    for i in range(from_i, to_i):
+        if i &gt; 0 and close[i] &lt; close[i-1] * (1 - threshold):
+            return i  # return the chosen index
+    return -1  # no entry
+
+# Define exit choice function
+@njit
+def exit_choice_nb(from_i, to_i, col, close, threshold):
+    &quot;&quot;&quot;Exit when price rises by threshold from entry.&quot;&quot;&quot;
+    for i in range(from_i, to_i):
+        if i &gt; 0 and close[i] &gt; close[i-1] * (1 + threshold):
+            return i
+    return -1
+
+MySig = SignalFactory(
+    class_name='MySig',
+    input_names=['close'],
+    param_names=['threshold']
+).with_entry_exit_func(entry_choice_nb, exit_choice_nb)
+</code></pre>
+<h3 id="direct-signal-arrays">Direct Signal Arrays<a class="headerlink" href="#direct-signal-arrays" title="Permanent link">&para;</a></h3>
+<p>For simpler strategies, create boolean arrays directly:</p>
+<pre><code class="language-python"># Moving average crossover
+fast_ma = close.rolling(10).mean()
+slow_ma = close.rolling(30).mean()
+
+entries = fast_ma &gt; slow_ma  # golden cross
+exits = fast_ma &lt; slow_ma    # death cross
+
+pf = vbt.Portfolio.from_signals(close, entries, exits)
+</code></pre>
+<h2 id="data-source-integration">Data Source Integration<a class="headerlink" href="#data-source-integration" title="Permanent link">&para;</a></h2>
+<h3 id="creating-a-custom-data-source">Creating a Custom Data Source<a class="headerlink" href="#creating-a-custom-data-source" title="Permanent link">&para;</a></h3>
+<p>Extend the <code>Data</code> base class:</p>
+<pre><code class="language-python">from vectorbt.data.base import Data
+
+class MyData(Data):
+    @classmethod
+    def download(cls, symbols, start=None, end=None, **kwargs):
+        # Fetch data from your source
+        data = {}
+        for symbol in symbols:
+            df = my_api.get_ohlcv(symbol, start, end)
+            data[symbol] = df
+        return cls(data, **kwargs)
+</code></pre>
+<h3 id="using-dataupdater">Using DataUpdater<a class="headerlink" href="#using-dataupdater" title="Permanent link">&para;</a></h3>
+<pre><code class="language-python"># Initial download
+data = vbt.YFData.download(['AAPL', 'GOOGL'], start='2020')
+
+# Set up periodic updates
+updater = vbt.DataUpdater(data)
+updater.update_every(minutes=5)  # uses schedule library
+</code></pre>
+<h2 id="performance-optimization-tips">Performance Optimization Tips<a class="headerlink" href="#performance-optimization-tips" title="Permanent link">&para;</a></h2>
+<h3 id="1-use-numba-for-custom-logic">1. Use Numba for Custom Logic<a class="headerlink" href="#1-use-numba-for-custom-logic" title="Permanent link">&para;</a></h3>
+<p>Always use <code>@njit(cache=True)</code> for functions passed to the portfolio simulator:</p>
+<pre><code class="language-python">from numba import njit
+
+@njit(cache=True)
+def my_order_func(oc):
+    # oc is OrderContext - a Numba-compatible named tuple
+    if oc.position_now == 0 and should_enter(oc):
+        return (oc.close[oc.i, oc.col], 1.0, 0)  # price, size, direction
+    return (-1, np.nan, 0)  # no order
+</code></pre>
+<h3 id="2-vectorize-parameter-sweeps">2. Vectorize Parameter Sweeps<a class="headerlink" href="#2-vectorize-parameter-sweeps" title="Permanent link">&para;</a></h3>
+<p>Instead of looping over parameters in Python, broadcast them:</p>
+<pre><code class="language-python"># BAD - Python loop
+results = []
+for window in [10, 20, 30, 50, 100]:
+    ma = close.rolling(window).mean()
+    entries = close &gt; ma
+    pf = vbt.Portfolio.from_signals(close, entries)
+    results.append(pf.total_return())
+
+# GOOD - vectorized
+windows = [10, 20, 30, 50, 100]
+ma = vbt.MA.run(close, window=windows)
+entries = close.vbt.broadcast_to(ma.ma) &gt; ma.ma
+pf = vbt.Portfolio.from_signals(close, entries)
+returns = pf.total_return()  # Series indexed by window
+</code></pre>
+<h3 id="3-use-records-instead-of-matrices">3. Use Records Instead of Matrices<a class="headerlink" href="#3-use-records-instead-of-matrices" title="Permanent link">&para;</a></h3>
+<p>For sparse data, records use orders of magnitude less memory:</p>
+<pre><code class="language-python"># Dense matrix: N_rows x N_cols x sizeof(float)
+# Records: N_events x N_fields x sizeof(field_type)
+
+# Access record fields via MappedArray
+pf.orders.size.mean()  # efficient aggregation
+</code></pre>
+<h3 id="4-minimize-data-copies">4. Minimize Data Copies<a class="headerlink" href="#4-minimize-data-copies" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Use <code>to_2d_array()</code> to avoid repeated conversions</li>
+<li>Let broadcasting handle shape alignment instead of manual padding</li>
+<li>Use <code>flex_select_auto_nb</code> for flexible array indexing in Numba</li>
+</ul>
+<h3 id="5-warm-up-numba-cache">5. Warm Up Numba Cache<a class="headerlink" href="#5-warm-up-numba-cache" title="Permanent link">&para;</a></h3>
+<p>First run compiles Numba functions. Subsequent runs use cached bytecode:</p>
+<pre><code class="language-python"># Warm up with small data
+small_pf = vbt.Portfolio.from_signals(close.iloc[:10], entries.iloc[:10])
+
+# Now run with full data - compilation is cached
+full_pf = vbt.Portfolio.from_signals(close, entries)
+</code></pre>
+<h3 id="6-profile-with-py-spy">6. Profile with py-spy<a class="headerlink" href="#6-profile-with-py-spy" title="Permanent link">&para;</a></h3>
+<pre><code class="language-bash"># Flame graph
+py-spy record -o profile.svg -- python my_strategy.py
+
+# Top-like view
+py-spy top -- python my_strategy.py
+</code></pre>
+<h2 id="project-structure">Project Structure<a class="headerlink" href="#project-structure" title="Permanent link">&para;</a></h2>
+<pre><code>vectorbt/
+├── src/vectorbt/
+│   ├── __init__.py          # Top-level imports
+│   ├── _settings.py         # Global settings (SettingsConfig)
+│   ├── _typing.py           # Type aliases
+│   ├── _version.py          # Version string
+│   ├── ohlcv_accessors.py   # OHLCV pandas accessors (.vbt.ohlcv)
+│   ├── base/                # ArrayWrapper, reshape, indexing, combine
+│   ├── data/                # Data sources (YF, Binance, CCXT, Alpaca, synthetic)
+│   ├── generic/             # Drawdowns, ranges, splitters, stats/plots builders
+│   ├── indicators/          # IndicatorFactory, built-in indicators
+│   ├── labels/              # ML labeling utilities
+│   ├── messaging/           # Telegram integration
+│   ├── portfolio/           # Portfolio simulator, Numba kernels, enums
+│   ├── records/             # Records, MappedArray, ColumnMapper
+│   ├── returns/             # Return analysis
+│   ├── signals/             # SignalFactory, signal generators
+│   ├── templates/           # Plotly templates
+│   └── utils/               # Config, caching, decorators, datetime, math
+├── tests/                   # pytest test suite
+├── docs/                    # Documentation
+├── examples/                # Example notebooks
+├── apps/                    # Applications
+└── pyproject.toml           # Project configuration
+</code></pre>
+<h2 id="configuration-reference">Configuration Reference<a class="headerlink" href="#configuration-reference" title="Permanent link">&para;</a></h2>
+<h3 id="portfoliofrom_signals-parameters">Portfolio.from_signals() Parameters<a class="headerlink" href="#portfoliofrom_signals-parameters" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>close</code></td>
+<td><code>ArrayLike</code></td>
+<td><em>(required)</em></td>
+<td>Close price series or DataFrame.</td>
+</tr>
+<tr>
+<td><code>entries</code></td>
+<td><code>ArrayLike \| None</code></td>
+<td><code>None</code></td>
+<td>Boolean array of entry signals.</td>
+</tr>
+<tr>
+<td><code>exits</code></td>
+<td><code>ArrayLike \| None</code></td>
+<td><code>None</code></td>
+<td>Boolean array of exit signals.</td>
+</tr>
+<tr>
+<td><code>short_entries</code></td>
+<td><code>ArrayLike \| None</code></td>
+<td><code>None</code></td>
+<td>Boolean array of short entry signals.</td>
+</tr>
+<tr>
+<td><code>short_exits</code></td>
+<td><code>ArrayLike \| None</code></td>
+<td><code>None</code></td>
+<td>Boolean array of short exit signals.</td>
+</tr>
+<tr>
+<td><code>size</code></td>
+<td><code>ArrayLike \| None</code></td>
+<td><code>None</code></td>
+<td>Order size. Interpretation depends on <code>size_type</code>.</td>
+</tr>
+<tr>
+<td><code>size_type</code></td>
+<td><code>ArrayLike \| None</code></td>
+<td><code>None</code></td>
+<td>How to interpret <code>size</code>: <code>'amount'</code>, <code>'value'</code>, <code>'percent'</code>, <code>'targetamount'</code>, <code>'targetvalue'</code>, <code>'targetpercent'</code>.</td>
+</tr>
+<tr>
+<td><code>price</code></td>
+<td><code>ArrayLike \| None</code></td>
+<td><code>None</code></td>
+<td>Execution price. Defaults to <code>close</code>.</td>
+</tr>
+<tr>
+<td><code>fees</code></td>
+<td><code>ArrayLike \| None</code></td>
+<td><code>None</code></td>
+<td>Fees as a fraction of order value (e.g., <code>0.001</code> = 0.1%).</td>
+</tr>
+<tr>
+<td><code>fixed_fees</code></td>
+<td><code>ArrayLike \| None</code></td>
+<td><code>None</code></td>
+<td>Fixed fee per order in cash units.</td>
+</tr>
+<tr>
+<td><code>slippage</code></td>
+<td><code>ArrayLike \| None</code></td>
+<td><code>None</code></td>
+<td>Slippage as a fraction of price.</td>
+</tr>
+<tr>
+<td><code>min_size</code></td>
+<td><code>ArrayLike \| None</code></td>
+<td><code>None</code></td>
+<td>Minimum order size. Orders below this are rejected.</td>
+</tr>
+<tr>
+<td><code>max_size</code></td>
+<td><code>ArrayLike \| None</code></td>
+<td><code>None</code></td>
+<td>Maximum order size.</td>
+</tr>
+<tr>
+<td><code>size_granularity</code></td>
+<td><code>ArrayLike \| None</code></td>
+<td><code>None</code></td>
+<td>Round order size to multiples of this value (e.g., <code>1.0</code> for integer positions).</td>
+</tr>
+<tr>
+<td><code>reject_prob</code></td>
+<td><code>ArrayLike \| None</code></td>
+<td><code>None</code></td>
+<td>Probability of random order rejection (for robustness testing).</td>
+</tr>
+<tr>
+<td><code>lock_cash</code></td>
+<td><code>ArrayLike \| None</code></td>
+<td><code>None</code></td>
+<td>Lock cash after each order to prevent overallocation.</td>
+</tr>
+<tr>
+<td><code>allow_partial</code></td>
+<td><code>ArrayLike \| None</code></td>
+<td><code>None</code></td>
+<td>Allow partial fills when cash is insufficient.</td>
+</tr>
+<tr>
+<td><code>raise_reject</code></td>
+<td><code>ArrayLike \| None</code></td>
+<td><code>None</code></td>
+<td>Raise an exception on order rejection instead of silently skipping.</td>
+</tr>
+<tr>
+<td><code>accumulate</code></td>
+<td><code>ArrayLike \| None</code></td>
+<td><code>None</code></td>
+<td>Allow adding to existing positions on repeated entry signals.</td>
+</tr>
+<tr>
+<td><code>direction</code></td>
+<td><code>ArrayLike \| None</code></td>
+<td><code>None</code></td>
+<td>Trade direction: <code>'longonly'</code>, <code>'shortonly'</code>, or <code>'both'</code>.</td>
+</tr>
+<tr>
+<td><code>sl_stop</code></td>
+<td><code>ArrayLike \| None</code></td>
+<td><code>None</code></td>
+<td>Stop-loss as a fraction of entry price (e.g., <code>0.05</code> = 5%).</td>
+</tr>
+<tr>
+<td><code>sl_trail</code></td>
+<td><code>ArrayLike \| None</code></td>
+<td><code>None</code></td>
+<td>Trailing stop-loss. If <code>True</code>, the SL level follows the price upward.</td>
+</tr>
+<tr>
+<td><code>tp_stop</code></td>
+<td><code>ArrayLike \| None</code></td>
+<td><code>None</code></td>
+<td>Take-profit as a fraction of entry price (e.g., <code>0.10</code> = 10%).</td>
+</tr>
+<tr>
+<td><code>stop_entry_price</code></td>
+<td><code>ArrayLike \| None</code></td>
+<td><code>None</code></td>
+<td>Price used for stop calculation: <code>'close'</code>, <code>'open'</code>, or custom.</td>
+</tr>
+<tr>
+<td><code>stop_exit_price</code></td>
+<td><code>ArrayLike \| None</code></td>
+<td><code>None</code></td>
+<td>Price used for stop exit: <code>'close'</code>, <code>'stoplimit'</code>, or custom.</td>
+</tr>
+<tr>
+<td><code>upon_stop_exit</code></td>
+<td><code>ArrayLike \| None</code></td>
+<td><code>None</code></td>
+<td>Behavior on stop exit: <code>'close'</code>, <code>'closereduce'</code>, <code>'reverse'</code>.</td>
+</tr>
+<tr>
+<td><code>upon_opposite_entry</code></td>
+<td><code>ArrayLike \| None</code></td>
+<td><code>None</code></td>
+<td>Behavior on opposite signal: <code>'close'</code>, <code>'closereduce'</code>, <code>'reverse'</code>, <code>'ignore'</code>.</td>
+</tr>
+<tr>
+<td><code>init_cash</code></td>
+<td><code>ArrayLike \| None</code></td>
+<td><code>None</code></td>
+<td>Initial cash. Default from <code>vbt.settings.portfolio['init_cash']</code> (100).</td>
+</tr>
+<tr>
+<td><code>cash_sharing</code></td>
+<td><code>bool \| None</code></td>
+<td><code>None</code></td>
+<td>Share cash across columns within groups.</td>
+</tr>
+<tr>
+<td><code>freq</code></td>
+<td><code>str \| None</code></td>
+<td><code>None</code></td>
+<td>Data frequency for annualization (e.g., <code>'1D'</code>, <code>'1H'</code>).</td>
+</tr>
+<tr>
+<td><code>seed</code></td>
+<td><code>int \| None</code></td>
+<td><code>None</code></td>
+<td>Random seed for reproducible results (relevant when <code>reject_prob</code> is used).</td>
+</tr>
+<tr>
+<td><code>group_by</code></td>
+<td><code>GroupByLike \| None</code></td>
+<td><code>None</code></td>
+<td>Group columns for cash sharing or joint analysis.</td>
+</tr>
+<tr>
+<td><code>log</code></td>
+<td><code>ArrayLike \| None</code></td>
+<td><code>None</code></td>
+<td>Enable order logging for debugging.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="global-settings-vbtsettings">Global Settings (<code>vbt.settings</code>)<a class="headerlink" href="#global-settings-vbtsettings" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Setting Path</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>portfolio.init_cash</code></td>
+<td><code>float</code></td>
+<td><code>100</code></td>
+<td>Default initial cash for portfolios.</td>
+</tr>
+<tr>
+<td><code>portfolio.fees</code></td>
+<td><code>float</code></td>
+<td><code>0.0</code></td>
+<td>Default fee rate.</td>
+</tr>
+<tr>
+<td><code>portfolio.slippage</code></td>
+<td><code>float</code></td>
+<td><code>0.0</code></td>
+<td>Default slippage rate.</td>
+</tr>
+<tr>
+<td><code>portfolio.freq</code></td>
+<td><code>str \| None</code></td>
+<td><code>None</code></td>
+<td>Default data frequency.</td>
+</tr>
+<tr>
+<td><code>data.tz_localize</code></td>
+<td><code>str \| None</code></td>
+<td><code>'UTC'</code></td>
+<td>Default timezone for data.</td>
+</tr>
+<tr>
+<td><code>returns.year_freq</code></td>
+<td><code>str</code></td>
+<td><code>'365 days'</code></td>
+<td>Frequency used for annualization.</td>
+</tr>
+<tr>
+<td><code>array_wrapper.freq</code></td>
+<td><code>str \| None</code></td>
+<td><code>None</code></td>
+<td>Default frequency for ArrayWrapper.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
+<h3 id="1-modulenotfounderror-no-module-named-numba">1. <code>ModuleNotFoundError: No module named 'numba'</code><a class="headerlink" href="#1-modulenotfounderror-no-module-named-numba" title="Permanent link">&para;</a></h3>
+<p><strong>Cause</strong>: Numba is a core dependency not installed in the environment.
+<strong>Fix</strong>: Install numba: <code>pip install numba</code> or <code>pip install vectorbt[full]</code>. Numba requires a compatible LLVM version; use <code>conda install numba</code> if pip fails.</p>
+<h3 id="2-extremely-slow-first-run-fast-subsequent-runs">2. Extremely slow first run, fast subsequent runs<a class="headerlink" href="#2-extremely-slow-first-run-fast-subsequent-runs" title="Permanent link">&para;</a></h3>
+<p><strong>Cause</strong>: Numba JIT-compiles functions on first invocation. Compiled code is cached for subsequent runs.
+<strong>Fix</strong>: This is normal behavior. Warm up with small data to trigger compilation: <code>vbt.Portfolio.from_signals(close.iloc[:10], entries.iloc[:10])</code>. Use <code>cache=True</code> in custom <code>@njit</code> decorators.</p>
+<h3 id="3-valueerror-operands-could-not-be-broadcast-together">3. <code>ValueError: operands could not be broadcast together</code><a class="headerlink" href="#3-valueerror-operands-could-not-be-broadcast-together" title="Permanent link">&para;</a></h3>
+<p><strong>Cause</strong>: Shape mismatch between close prices and signals (entries/exits).
+<strong>Fix</strong>: Ensure entries and exits have the same shape as close. When using multi-parameter indicator sweeps, broadcast close to match: <code>close_broadcast = close.vbt.broadcast_to(ma.ma)</code>.</p>
+<h3 id="4-statistics-show-nan-for-sharpe-ratio-or-other-metrics">4. Statistics show <code>NaN</code> for Sharpe ratio or other metrics<a class="headerlink" href="#4-statistics-show-nan-for-sharpe-ratio-or-other-metrics" title="Permanent link">&para;</a></h3>
+<p><strong>Cause</strong>: Too few data points, zero returns, or missing <code>freq</code> parameter prevents annualization.
+<strong>Fix</strong>: Set <code>freq='1D'</code> (or appropriate frequency) in <code>from_signals()</code>. Ensure the backtest period is long enough for meaningful statistics (at least 30 trading days).</p>
+<h3 id="5-memoryerror-with-large-parameter-sweeps">5. <code>MemoryError</code> with large parameter sweeps<a class="headerlink" href="#5-memoryerror-with-large-parameter-sweeps" title="Permanent link">&para;</a></h3>
+<p><strong>Cause</strong>: Vectorized broadcasting creates large intermediate arrays (N_rows x N_columns x N_params).
+<strong>Fix</strong>: Reduce the parameter space. Process parameters in batches. Use records (sparse storage) instead of dense matrices: <code>pf.orders.records</code> instead of full-matrix outputs.</p>
+<h3 id="6-plotly-figures-not-displaying-in-jupyter">6. Plotly figures not displaying in Jupyter<a class="headerlink" href="#6-plotly-figures-not-displaying-in-jupyter" title="Permanent link">&para;</a></h3>
+<p><strong>Cause</strong>: Plotly renderer not configured for the notebook environment.
+<strong>Fix</strong>: Run <code>import plotly.io as pio; pio.renderers.default = 'notebook'</code> or install <code>nbformat</code>: <code>pip install nbformat&gt;=4.2.0</code>.</p>
+<h3 id="7-entries-and-exits-on-the-same-bar-produce-unexpected-behavior">7. Entries and exits on the same bar produce unexpected behavior<a class="headerlink" href="#7-entries-and-exits-on-the-same-bar-produce-unexpected-behavior" title="Permanent link">&para;</a></h3>
+<p><strong>Cause</strong>: By default, conflicting signals on the same bar follow the <code>upon_long_conflict</code> / <code>upon_short_conflict</code> resolution rules.
+<strong>Fix</strong>: Set conflict resolution explicitly: <code>upon_long_conflict='ignore'</code> or <code>'exit'</code>. Review the signal arrays to remove simultaneous entry/exit signals.</p>
+<h3 id="8-stop-loss-not-triggering-accurately">8. Stop-loss not triggering accurately<a class="headerlink" href="#8-stop-loss-not-triggering-accurately" title="Permanent link">&para;</a></h3>
+<p><strong>Cause</strong>: Without <code>open</code>, <code>high</code>, <code>low</code> data, stops can only be evaluated against <code>close</code>, missing intra-bar breaches.
+<strong>Fix</strong>: Pass OHLC data: <code>vbt.Portfolio.from_signals(close, entries, exits, open=open, high=high, low=low, sl_stop=0.05)</code>.</p>
+<h2 id="security-considerations">Security Considerations<a class="headerlink" href="#security-considerations" title="Permanent link">&para;</a></h2>
+<h3 id="api-keys-and-data-sources">API Keys and Data Sources<a class="headerlink" href="#api-keys-and-data-sources" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Built-in data downloaders (YFData, BinanceData, CCXTData, AlpacaData) require API keys or exchange credentials. Never hardcode these in scripts.</li>
+<li>Use environment variables: <code>os.environ['ALPACA_API_KEY']</code> or a <code>.env</code> file with <code>python-dotenv</code>. Add <code>.env</code> to <code>.gitignore</code>.</li>
+</ul>
+<h3 id="data-integrity">Data Integrity<a class="headerlink" href="#data-integrity" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Downloaded market data should be validated for completeness and correctness. Missing bars, stock splits, or dividend adjustments can produce misleading backtest results.</li>
+<li>The <code>SyntheticData</code> and <code>GBMData</code> generators use pseudo-random numbers. Set <code>seed</code> for reproducibility, but do not use synthetic data for production decisions.</li>
+</ul>
+<h3 id="numba-code-execution">Numba Code Execution<a class="headerlink" href="#numba-code-execution" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Numba JIT-compiles Python functions to machine code. Custom <code>@njit</code> functions execute at the CPU level without Python's safety checks.</li>
+<li>Only JIT-compile trusted code. Do not accept arbitrary Numba functions from untrusted sources, as they can perform unrestricted memory access.</li>
+</ul>
+<h3 id="pickle-and-caching">Pickle and Caching<a class="headerlink" href="#pickle-and-caching" title="Permanent link">&para;</a></h3>
+<ul>
+<li>vectorbt caches compiled Numba functions and computed results. Cache files are stored in <code>__pycache__</code> directories.</li>
+<li>Portfolio objects can be pickled for persistence. Do not pickle objects containing credentials or sensitive data.</li>
+<li>The <code>dill</code> dependency (used for serialization) can deserialize arbitrary Python objects. Only load pickled files from trusted sources.</li>
+</ul>
+<h3 id="telegram-integration">Telegram Integration<a class="headerlink" href="#telegram-integration" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The messaging module supports Telegram bot notifications. Bot tokens grant full control over the bot. Store tokens securely and rotate them if compromised.</li>
+<li>Telegram messages may contain portfolio values and trade details. Be cautious about sending sensitive financial data over messaging platforms.</li>
+</ul>
+<h3 id="look-ahead-bias">Look-Ahead Bias<a class="headerlink" href="#look-ahead-bias" title="Permanent link">&para;</a></h3>
+<ul>
+<li>vectorbt's vectorized design computes indicators over full arrays. When used correctly with <code>from_signals()</code>, the simulation engine processes bars sequentially. However, building signals from future data (e.g., using <code>.shift(-1)</code>) introduces look-ahead bias.</li>
+<li>Always verify that signal arrays only use data available at or before each bar's timestamp.</li>
+</ul>
+<hr />
+<h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="README.md">README</a> — Project overview and quick start</li>
+<li><a href="architecture.md">Architecture</a> — System design and components</li>
+<li><a href="workflow.md">Workflow</a> — Event flows and processing pipelines</li>
+<li><a href="state-management.md">State Management</a> — State lifecycle and data models</li>
+</ul>
+<h2 id="maintained-uv-environment-2026-10-12">Maintained uv environment (2026-10-12)<a class="headerlink" href="#maintained-uv-environment-2026-10-12" title="Permanent link">&para;</a></h2>
+<p>The tested interpreter selection is Python 3.14.8. uv 0.13.0 resolves runtime dependencies, optional extras, development groups, and build isolation. <code>uv.lock</code> records exact versions; <code>--upgrade</code> refreshes them within the project and compatibility constraints. Review <a href="validation.md">validation evidence</a> before treating a build or test command as successful on this host.</p>
+<p>Python 3.15 cannot install the Ray 2.59.0 wheel in the full environment; CPython 3.14 is supported. The matching native vectorbt-rust package is resolved from rust/.</p>
+<h3 id="layout-and-build-ownership">Layout and build ownership<a class="headerlink" href="#layout-and-build-ownership" title="Permanent link">&para;</a></h3>
+<p>Python code remains under src/vectorbt with Hatchling packaging. Tests import from src. The native companion remains in rust/ with its maturin backend and Cargo manifest.</p>
+<p>The native toolchain used for these checks is Rust 1.99.0 with Apple Command Line Tools. Make Cargo available with <code>export PATH=/opt/homebrew/opt/rustup/bin:$PATH</code>.</p>
+<h3 id="commands-from-the-repository-root">Commands from the repository root<a class="headerlink" href="#commands-from-the-repository-root" title="Permanent link">&para;</a></h3>
+<pre><code class="language-sh">uv python install 3.14.8
+uv lock --upgrade --python 3.14.8
+uv sync --all-groups --all-extras --python 3.14.8
+uv build
+uv run --no-sync pytest
+cargo test --manifest-path rust/Cargo.toml
+</code></pre>
+<h3 id="external-inputs-and-test-scope">External inputs and test scope<a class="headerlink" href="#external-inputs-and-test-scope" title="Permanent link">&para;</a></h3>
+<p>Data provider integrations are optional external services. Their API versions can affect import and network tests. The rust/ project supplies the matching vectorbt-rust package through a uv path source. A Python wheel and a Rust extension build are separate artifacts and both are recorded in validation.</p>
+<p>Existing upstream skips and xfails remain unchanged. Full suite failures, incomplete runs, and supplemental scoped checks are listed separately in validation. No new test cases were added. The architecture document links existing implementation files and explains the component contracts.</p></main>
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@12.1.0/dist/mermaid.esm.min.mjs';
+mermaid.initialize({startOnLoad:true,securityLevel:'strict',theme:'default',flowchart:{useMaxWidth:true},sequence:{useMaxWidth:true}});
+</script></body></html>

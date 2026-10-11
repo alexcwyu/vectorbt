@@ -13,6 +13,8 @@
 
 from datetime import datetime, timezone, timedelta, tzinfo, time
 
+import re
+
 import dateparser
 import numpy as np
 import pandas as pd
@@ -25,6 +27,8 @@ DatetimeIndexes = (pd.DatetimeIndex, pd.TimedeltaIndex, pd.PeriodIndex)
 
 def freq_to_timedelta(arg: tp.FrequencyLike) -> pd.Timedelta:
     """`pd.to_timedelta` that uses unit abbreviation with number."""
+    if isinstance(arg, str):
+        arg = re.sub(r"(?<=\d)([dw])\b|^([dw])$", lambda match: match.group(0).upper(), arg)
     if isinstance(arg, str) and not arg[0].isdigit():
         # Otherwise "ValueError: unit abbreviation w/o a number"
         return pd.Timedelta(1, unit=arg)

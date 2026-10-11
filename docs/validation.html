@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Validation evidence</title><style>
+:root{color-scheme:light dark;--bg:#f6f8fa;--paper:#fff;--fg:#182332;--muted:#526274;--line:#d9e0e7;--accent:#1769aa}
+@media(prefers-color-scheme:dark){:root{--bg:#111820;--paper:#192330;--fg:#e6edf3;--muted:#a0b3c5;--line:#344354;--accent:#71b7ee}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 system-ui,-apple-system,sans-serif}
+header{border-bottom:1px solid var(--line);padding:16px max(24px,calc((100vw - 1120px)/2));background:var(--paper);font-size:14px}
+main{max-width:1120px;margin:32px auto;padding:40px 48px;background:var(--paper);border:1px solid var(--line);border-radius:12px}
+h1,h2,h3,h4{line-height:1.3;scroll-margin-top:24px}h1{font-size:2.1rem}h2{margin-top:2.5em;border-bottom:1px solid var(--line);padding-bottom:.35em}h3{margin-top:1.8em}
+a{color:var(--accent);text-underline-offset:3px}code{font:14px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--bg);border-radius:4px;padding:2px 5px}pre{overflow:auto;border:1px solid var(--line);background:var(--bg);padding:16px;border-radius:7px}pre code{padding:0;background:none}
+table{border-collapse:collapse;width:100%;display:block;overflow-x:auto;font-size:14px}th,td{border:1px solid var(--line);padding:9px 12px;text-align:left}th{background:var(--bg)}blockquote{border-left:4px solid var(--accent);margin:16px 0;padding:4px 20px;color:var(--muted)}
+.diagram{overflow-x:auto;margin:24px 0;padding:20px;border:1px solid var(--line);border-radius:8px;background:#fff;color:#182332}.mermaid{border:0;background:none;text-align:center}.mermaid svg{height:auto;max-width:100%}details{font-size:13px;color:#526274}.headerlink{margin-left:.4em;font-size:.7em;text-decoration:none;color:var(--muted)}
+main{min-width:0;overflow-wrap:anywhere}table,pre{max-width:100%}.diagram svg{display:block}
+th,td{min-width:120px;overflow-wrap:normal}
+@media(max-width:740px){main{margin:0;padding:24px 18px;border:0;border-radius:0}h1{font-size:1.7rem}.diagram{padding:8px}}
+@media print{header,details,.headerlink{display:none}body,main{background:#fff;color:#000;border:0;margin:0;padding:0}a{color:#000}.diagram,pre{break-inside:avoid}}
+</style></head><body><header>Engineering documentation · <a href="validation.md">Markdown source</a></header><main><h1 id="validation-evidence">Validation evidence<a class="headerlink" href="#validation-evidence" title="Permanent link">&para;</a></h1>
+<p>Recorded 2026-10-12 on macOS arm64. Selected Python: <strong>3.14.8</strong>; uv0.13.0; native Cargo/Rust1.99.0. Commands below ran from the repository root. Exit124 means the documented time bound expired; exit139 means a native segmentation fault. An earlier failed attempt is retained even if a later rerun succeeds.</p>
+<h2 id="current-scope-and-result">Current scope and result<a class="headerlink" href="#current-scope-and-result" title="Permanent link">&para;</a></h2>
+<p>Full existing Python suite:1113passed, no skips/failures. The initial complete run had1076passed and37strict-warning failures; subsequent complete runs retained all assertions and cases. Explicit NumPy time units, typed Numba cache inputs, current Pandas durations, exact documented warning assertions, and the current QuantStats paired-observation R-squared result repair compatibility. The Rust extension builds during full all-extra sync; Cargo native tests and existing Python engine parity tests also pass.</p>
+<p>Current recorded status: <strong>complete</strong>. Interpreter fallback evidence and native prerequisites are described in <a href="development.md">development</a>. See <a href="ayu-develop.md">architecture</a> for workflows, components, and existing source links.</p>
+<h2 id="executed-commands">Executed commands<a class="headerlink" href="#executed-commands" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Exact command</th>
+<th style="text-align: right;">Exit</th>
+<th style="text-align: right;">Elapsed seconds</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>python315-sync</td>
+<td><code>uv sync --python 3.15 --all-groups --all-extras</code></td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">unrecorded</td>
+<td><a href="../../docs/maintenance-2026-10-12/vectorbt-python315-sync.log">vectorbt-python315-sync.log</a></td>
+</tr>
+<tr>
+<td>python315-lock</td>
+<td><code>uv lock --upgrade --python 3.15</code></td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">unrecorded</td>
+<td><a href="../../docs/maintenance-2026-10-12/vectorbt-python315-lock.log">vectorbt-python315-lock.log</a></td>
+</tr>
+<tr>
+<td>python314-sync</td>
+<td><code>uv sync --all-groups --all-extras --python 3.14.8</code></td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">70.89</td>
+<td><a href="../../docs/maintenance-2026-10-12/vectorbt-python314-sync.log">vectorbt-python314-sync.log</a></td>
+</tr>
+<tr>
+<td>tests</td>
+<td><code>uv run --no-sync pytest</code></td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">17.55</td>
+<td><a href="../../docs/maintenance-2026-10-12/vectorbt-tests.log">vectorbt-tests.log</a></td>
+</tr>
+<tr>
+<td>build</td>
+<td><code>uv build</code></td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">2.82</td>
+<td><a href="../../docs/maintenance-2026-10-12/vectorbt-build.log">vectorbt-build.log</a></td>
+</tr>
+<tr>
+<td>tests-lazy-provider-import</td>
+<td><code>uv run --no-sync pytest</code></td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">24.44</td>
+<td><a href="../../docs/maintenance-2026-10-12/vectorbt-tests-lazy-provider-import.log">vectorbt-tests-lazy-provider-import.log</a></td>
+</tr>
+<tr>
+<td>tests-explicit-time-units</td>
+<td><code>uv run --no-sync pytest</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">702.37</td>
+<td><a href="../../docs/maintenance-2026-10-12/vectorbt-tests-explicit-time-units.log">vectorbt-tests-explicit-time-units.log</a></td>
+</tr>
+<tr>
+<td>cargo-tests</td>
+<td><code>cargo test --manifest-path rust/Cargo.toml</code></td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">46.36</td>
+<td><a href="../../docs/maintenance-2026-10-12/vectorbt-cargo-tests.log">vectorbt-cargo-tests.log</a></td>
+</tr>
+<tr>
+<td>tests-current-warning-contracts</td>
+<td><code>uv run --no-sync pytest</code></td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">26.95</td>
+<td><a href="../../docs/maintenance-2026-10-12/vectorbt-tests-current-warning-contracts.log">vectorbt-tests-current-warning-contracts.log</a></td>
+</tr>
+<tr>
+<td>tests-asserted-warnings</td>
+<td><code>uv run --no-sync pytest</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">742.47</td>
+<td><a href="../../docs/maintenance-2026-10-12/vectorbt-tests-asserted-warnings.log">vectorbt-tests-asserted-warnings.log</a></td>
+</tr>
+<tr>
+<td>tests-warning-assertions</td>
+<td><code>uv run --no-sync pytest</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">732.81</td>
+<td><a href="../../docs/maintenance-2026-10-12/vectorbt-tests-warning-assertions.log">vectorbt-tests-warning-assertions.log</a></td>
+</tr>
+<tr>
+<td>data-warning-current</td>
+<td><code>uv run --no-sync pytest tests/test_data.py::TestData::test_download -x</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">12.3</td>
+<td><a href="../../docs/maintenance-2026-10-12/vectorbt-data-warning-current.log">vectorbt-data-warning-current.log</a></td>
+</tr>
+<tr>
+<td>engine-parity-current</td>
+<td><code>uv run --no-sync pytest tests/test_engine.py::TestIndicatorRustParity -x</code></td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">64.0</td>
+<td><a href="../../docs/maintenance-2026-10-12/vectorbt-engine-parity-current.log">vectorbt-engine-parity-current.log</a></td>
+</tr>
+<tr>
+<td>data-warning-contracts</td>
+<td><code>uv run --no-sync pytest tests/test_data.py::TestData::test_download -x</code></td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">11.98</td>
+<td><a href="../../docs/maintenance-2026-10-12/vectorbt-data-warning-contracts.log">vectorbt-data-warning-contracts.log</a></td>
+</tr>
+<tr>
+<td>tests-current-contracts-final</td>
+<td><code>uv run --no-sync pytest</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">269.18</td>
+<td><a href="../../docs/maintenance-2026-10-12/vectorbt-tests-current-contracts-final.log">vectorbt-tests-current-contracts-final.log</a></td>
+</tr>
+<tr>
+<td>tests-all-final</td>
+<td><code>uv run --no-sync pytest</code></td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">236.42</td>
+<td><a href="../../docs/maintenance-2026-10-12/vectorbt-tests-all-final.log">vectorbt-tests-all-final.log</a></td>
+</tr>
+<tr>
+<td>build-final</td>
+<td><code>uv build</code></td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1.2</td>
+<td><a href="../../docs/maintenance-2026-10-12/vectorbt-build-final.log">vectorbt-build-final.log</a></td>
+</tr>
+</tbody>
+</table>
+<h2 id="test-summaries-and-failures">Test summaries and failures<a class="headerlink" href="#test-summaries-and-failures" title="Permanent link">&para;</a></h2>
+<h3 id="tests">tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h3>
+<p>Exit 4; elapsed 17.55seconds.</p>
+<pre><code class="language-text">    from binance.async_client import AsyncClient  # noqa
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/binance/async_client.py:22: in &lt;module&gt;
+    from .base_client import BaseClient
+.venv/lib/python3.14/site-packages/binance/base_client.py:18: in &lt;module&gt;
+    from binance.ws.websocket_api import WebsocketAPI
+.venv/lib/python3.14/site-packages/binance/ws/websocket_api.py:4: in &lt;module&gt;
+    from websockets import WebSocketClientProtocol  # type: ignore
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/websockets/imports.py:86: in __getattr__
+    warnings.warn(
+E   DeprecationWarning: websockets.WebSocketClientProtocol is deprecated
+</code></pre>
+<h3 id="tests-lazy-provider-import">tests-lazy-provider-import<a class="headerlink" href="#tests-lazy-provider-import" title="Permanent link">&para;</a></h3>
+<p>Exit 2; elapsed 24.44seconds.</p>
+<pre><code class="language-text">    ^^^^^^^^^^^^^^^^^^^^
+E   DeprecationWarning: The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.
+=========================== short test summary info ============================
+ERROR tests/test_base.py - DeprecationWarning: The 'generic' unit for NumPy t...
+ERROR tests/test_generic.py - DeprecationWarning: The 'generic' unit for NumP...
+ERROR tests/test_portfolio.py - DeprecationWarning: The 'generic' unit for Nu...
+ERROR tests/test_records.py - DeprecationWarning: The 'generic' unit for NumP...
+ERROR tests/test_returns.py - DeprecationWarning: The 'generic' unit for NumP...
+ERROR tests/test_signals.py - DeprecationWarning: The 'generic' unit for NumP...
+ERROR tests/test_utils.py - DeprecationWarning: The 'generic' unit for NumPy ...
+!!!!!!!!!!!!!!!!!!! Interrupted: 7 errors during collection !!!!!!!!!!!!!!!!!!!!
+7 errors in 7.78s
+</code></pre>
+<h3 id="tests-explicit-time-units">tests-explicit-time-units<a class="headerlink" href="#tests-explicit-time-units" title="Permanent link">&para;</a></h3>
+<p>Exit 1; elapsed 702.37seconds.</p>
+<pre><code class="language-text">FAILED tests/test_data.py::TestData::test_stats - UserWarning: Symbols have m...
+FAILED tests/test_engine.py::TestIndicatorRustParity::test_dispatch_matches_numba
+FAILED tests/test_engine.py::TestIndicatorRustParity::test_basic_indicators_match_numba
+FAILED tests/test_generic.py::TestAccessors::test_resample_apply[1h] - pandas...
+FAILED tests/test_generic.py::TestAccessors::test_resample_apply[3d] - pandas...
+FAILED tests/test_generic.py::TestAccessors::test_resample_apply[1w] - pandas...
+FAILED tests/test_generic.py::TestAccessors::test_stats - UserWarning: Metric...
+FAILED tests/test_generic.py::TestAccessors::test_stats_mapping - UserWarning...
+FAILED tests/test_indicators.py::TestFactory::test_run_unique - UserWarning: ...
+FAILED tests/test_indicators.py::TestFactory::test_numeric_attr - UserWarning...
+FAILED tests/test_indicators.py::TestFactory::test_boolean_attr - UserWarning...
+FAILED tests/test_indicators.py::TestFactory::test_mapping_attr - UserWarning...
+FAILED tests/test_indicators.py::TestFactory::test_stats - UserWarning: Objec...
+FAILED tests/test_indicators.py::TestBasic::test_MA - numba.core.errors.Numba...
+FAILED tests/test_indicators.py::TestBasic::test_MSTD - numba.core.errors.Num...
+FAILED tests/test_indicators.py::TestBasic::test_BBANDS - numba.core.errors.N...
+FAILED tests/test_indicators.py::TestBasic::test_RSI - numba.core.errors.Numb...
+FAILED tests/test_indicators.py::TestBasic::test_STOCH - numba.core.errors.Nu...
+FAILED tests/test_indicators.py::TestBasic::test_MACD - numba.core.errors.Num...
+FAILED tests/test_indicators.py::TestBasic::test_ATR - numba.core.errors.Numb...
+FAILED tests/test_portfolio.py::TestPortfolio::test_stats - UserWarning: Obje...
+FAILED tests/test_portfolio.py::TestPortfolio::test_plots - UserWarning: Subp...
+FAILED tests/test_records.py::TestMappedArray::test_stats - UserWarning: Metr...
+FAILED tests/test_records.py::TestMappedArray::test_stats_mapping - UserWarni...
+FAILED tests/test_records.py::TestRecords::test_stats - UserWarning: Object h...
+FAILED tests/test_records.py::TestRanges::test_stats - UserWarning: Object ha...
+FAILED tests/test_records.py::TestDrawdowns::test_stats - UserWarning: Object...
+FAILED tests/test_records.py::TestOrders::test_stats - UserWarning: Object ha...
+FAILED tests/test_records.py::TestExitTrades::test_stats - UserWarning: Objec...
+FAILED tests/test_records.py::TestLogs::test_stats - UserWarning: Object has ...
+FAILED tests/test_returns.py::TestAccessors::test_stats - UserWarning: Metric...
+FAILED tests/test_returns.py::TestAccessors::test_qs - pandas.errors.Pandas4W...
+FAILED tests/test_signals.py::TestAccessors::test_stats - UserWarning: Object...
+FAILED tests/test_utils.py::TestDatetime::test_to_timedelta - pandas.errors.P...
+37 failed, 1076 passed in 687.44s (0:11:27)
+</code></pre>
+<h3 id="cargo-tests">cargo-tests<a class="headerlink" href="#cargo-tests" title="Permanent link">&para;</a></h3>
+<p>Exit 0; elapsed 46.36seconds.</p>
+<pre><code class="language-text">test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+</code></pre>
+<h3 id="tests-current-warning-contracts">tests-current-warning-contracts<a class="headerlink" href="#tests-current-warning-contracts" title="Permanent link">&para;</a></h3>
+<p>Exit 2; elapsed 26.95seconds.</p>
+<pre><code class="language-text">    tree = ast.parse(source, filename=strfn)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../../.local/share/uv/python/cpython-3.14.8-macos-aarch64-none/lib/python3.14/ast.py:46: in parse
+    return compile(source, filename, mode, flags,
+E     File &quot;/Users/alex/workspaces/trading/vectorbt/tests/test_indicators.py&quot;, line 1725
+E       with pytest.warns(UserWarning, match='Object has multiple columns|Metric .* returned multiple values|Metric .* requires benchmark_rets'):
+E       ^^^^
+E   SyntaxError: invalid syntax
+=========================== short test summary info ============================
+ERROR tests/test_indicators.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 9.76s
+</code></pre>
+<h3 id="tests-asserted-warnings">tests-asserted-warnings<a class="headerlink" href="#tests-asserted-warnings" title="Permanent link">&para;</a></h3>
+<p>Exit 1; elapsed 742.47seconds.</p>
+<pre><code class="language-text">FAILED tests/test_data.py::TestData::test_download - UserWarning: Symbols hav...
+FAILED tests/test_data.py::TestData::test_update - UserWarning: Symbols have ...
+FAILED tests/test_data.py::TestData::test_stats - UserWarning: Symbols have m...
+FAILED tests/test_generic.py::TestAccessors::test_stats_mapping - UserWarning...
+FAILED tests/test_portfolio.py::TestPortfolio::test_stats - UserWarning: Chan...
+FAILED tests/test_portfolio.py::TestPortfolio::test_plots - UserWarning: Subp...
+FAILED tests/test_records.py::TestDrawdowns::test_stats - UserWarning: Metric...
+FAILED tests/test_returns.py::TestAccessors::test_stats - UserWarning: Changi...
+FAILED tests/test_returns.py::TestAccessors::test_qs - assert np.float64(0.85...
+FAILED tests/test_utils.py::TestDatetime::test_to_timedelta - pandas.errors.P...
+10 failed, 1103 passed in 728.26s (0:12:08)
+</code></pre>
+<h3 id="tests-warning-assertions">tests-warning-assertions<a class="headerlink" href="#tests-warning-assertions" title="Permanent link">&para;</a></h3>
+<p>Exit 1; elapsed 732.81seconds.</p>
+<pre><code class="language-text">FAILED tests/test_data.py::TestData::test_download - UserWarning: Symbols hav...
+FAILED tests/test_data.py::TestData::test_update - UserWarning: Symbols have ...
+FAILED tests/test_data.py::TestData::test_stats - UserWarning: Symbols have m...
+FAILED tests/test_generic.py::TestAccessors::test_stats_mapping - UserWarning...
+FAILED tests/test_portfolio.py::TestPortfolio::test_stats - UserWarning: Chan...
+FAILED tests/test_portfolio.py::TestPortfolio::test_plots - UserWarning: Subp...
+FAILED tests/test_records.py::TestDrawdowns::test_stats - UserWarning: Metric...
+FAILED tests/test_returns.py::TestAccessors::test_stats - UserWarning: Changi...
+FAILED tests/test_returns.py::TestAccessors::test_qs - assert np.float64(0.85...
+FAILED tests/test_utils.py::TestDatetime::test_to_timedelta - pandas.errors.P...
+10 failed, 1103 passed in 718.02s (0:11:58)
+</code></pre>
+<h3 id="tests-current-contracts-final">tests-current-contracts-final<a class="headerlink" href="#tests-current-contracts-final" title="Permanent link">&para;</a></h3>
+<p>Exit 1; elapsed 269.18seconds.</p>
+<pre><code class="language-text">FAILED tests/test_data.py::TestData::test_stats - UserWarning: Object has mul...
+FAILED tests/test_returns.py::TestAccessors::test_stats - UserWarning: Changi...
+2 failed, 1111 passed in 259.96s (0:04:19)
+</code></pre>
+<h3 id="tests-all-final">tests-all-final<a class="headerlink" href="#tests-all-final" title="Permanent link">&para;</a></h3>
+<p>Exit 0; elapsed 236.42seconds.</p>
+<pre><code class="language-text">1113 passed in 227.09s (0:03:47)
+</code></pre>
+<h2 id="synchronization">Synchronization<a class="headerlink" href="#synchronization" title="Permanent link">&para;</a></h2>
+<p>All upstream branch and tag refs were fetched by the workspace synchronization procedure. Fork updates use non-forcing pushes; upstream tags also have a private local namespace to preserve divergent tags. The default branch was merged into feature/ayu_develop, preserving the modern package layout and upstream source changes. The workspace synchronization JSON and log retain per-ref outcomes and merge history. This document does not claim that any feature branch was pushed.</p></main>
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@12.1.0/dist/mermaid.esm.min.mjs';
+mermaid.initialize({startOnLoad:true,securityLevel:'strict',theme:'default',flowchart:{useMaxWidth:true},sequence:{useMaxWidth:true}});
+</script></body></html>

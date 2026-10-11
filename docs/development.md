@@ -438,3 +438,32 @@ vectorbt/
 - [Architecture](architecture.md) — System design and components
 - [Workflow](workflow.md) — Event flows and processing pipelines
 - [State Management](state-management.md) — State lifecycle and data models
+
+## Maintained uv environment (2026-10-12)
+
+The tested interpreter selection is Python 3.14.8. uv 0.13.0 resolves runtime dependencies, optional extras, development groups, and build isolation. `uv.lock` records exact versions; `--upgrade` refreshes them within the project and compatibility constraints. Review [validation evidence](validation.md) before treating a build or test command as successful on this host.
+
+Python 3.15 cannot install the Ray 2.59.0 wheel in the full environment; CPython 3.14 is supported. The matching native vectorbt-rust package is resolved from rust/.
+
+### Layout and build ownership
+
+Python code remains under src/vectorbt with Hatchling packaging. Tests import from src. The native companion remains in rust/ with its maturin backend and Cargo manifest.
+
+The native toolchain used for these checks is Rust 1.99.0 with Apple Command Line Tools. Make Cargo available with `export PATH=/opt/homebrew/opt/rustup/bin:$PATH`.
+
+### Commands from the repository root
+
+```sh
+uv python install 3.14.8
+uv lock --upgrade --python 3.14.8
+uv sync --all-groups --all-extras --python 3.14.8
+uv build
+uv run --no-sync pytest
+cargo test --manifest-path rust/Cargo.toml
+```
+
+### External inputs and test scope
+
+Data provider integrations are optional external services. Their API versions can affect import and network tests. The rust/ project supplies the matching vectorbt-rust package through a uv path source. A Python wheel and a Rust extension build are separate artifacts and both are recorded in validation.
+
+Existing upstream skips and xfails remain unchanged. Full suite failures, incomplete runs, and supplemental scoped checks are listed separately in validation. No new test cases were added. The architecture document links existing implementation files and explains the component contracts.

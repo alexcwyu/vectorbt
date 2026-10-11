@@ -1213,36 +1213,37 @@ class TestFactory:
             np.testing.assert_array_equal(other[0], ts.iloc[:, [i]] + 2)
 
     def test_run_unique(self):
-        F = vbt.IndicatorFactory(input_names=["ts"], param_names=["p1", "p2"], output_names=["out"])
+        with pytest.warns(UserWarning, match='Raw output is produced by unique parameter combinations'):
+            F = vbt.IndicatorFactory(input_names=["ts"], param_names=["p1", "p2"], output_names=["out"])
 
-        def apply_func(ts, p1, p2):
-            return ts * (p1 + p2)
+            def apply_func(ts, p1, p2):
+                return ts * (p1 + p2)
 
-        pd.testing.assert_series_equal(
-            F.from_apply_func(apply_func).run(ts["a"], 2, 3, run_unique=True).out,
-            F.from_apply_func(apply_func).run(ts["a"], 2, 3, run_unique=False).out,
-        )
-        raw = F.from_apply_func(apply_func).run(ts["a"], [2, 2, 2], [3, 3, 3], run_unique=True, return_raw=True)
-        np.testing.assert_array_equal(raw[0][0], np.array([[5.0], [10.0], [15.0], [20.0], [25.0]]))
-        assert raw[1] == [(2, 3)]
-        assert raw[2] == 1
-        assert raw[3] == []
-        pd.testing.assert_frame_equal(
-            F.from_apply_func(apply_func).run(ts["a"], [2, 2, 2], [3, 3, 3], run_unique=True).out,
-            F.from_apply_func(apply_func).run(ts["a"], [2, 2, 2], [3, 3, 3], run_unique=False).out,
-        )
-        pd.testing.assert_frame_equal(
-            F.from_apply_func(apply_func).run(ts, 2, 3, run_unique=True).out,
-            F.from_apply_func(apply_func).run(ts, 2, 3, run_unique=False).out,
-        )
-        pd.testing.assert_frame_equal(
-            F.from_apply_func(apply_func).run(ts, [2, 2, 2], [3, 3, 3], run_unique=True).out,
-            F.from_apply_func(apply_func).run(ts, [2, 2, 2], [3, 3, 3], run_unique=False).out,
-        )
-        pd.testing.assert_frame_equal(
-            F.from_apply_func(apply_func).run(ts, [2, 3, 4], [4, 3, 2], run_unique=True).out,
-            F.from_apply_func(apply_func).run(ts, [2, 3, 4], [4, 3, 2], run_unique=False).out,
-        )
+            pd.testing.assert_series_equal(
+                F.from_apply_func(apply_func).run(ts["a"], 2, 3, run_unique=True).out,
+                F.from_apply_func(apply_func).run(ts["a"], 2, 3, run_unique=False).out,
+            )
+            raw = F.from_apply_func(apply_func).run(ts["a"], [2, 2, 2], [3, 3, 3], run_unique=True, return_raw=True)
+            np.testing.assert_array_equal(raw[0][0], np.array([[5.0], [10.0], [15.0], [20.0], [25.0]]))
+            assert raw[1] == [(2, 3)]
+            assert raw[2] == 1
+            assert raw[3] == []
+            pd.testing.assert_frame_equal(
+                F.from_apply_func(apply_func).run(ts["a"], [2, 2, 2], [3, 3, 3], run_unique=True).out,
+                F.from_apply_func(apply_func).run(ts["a"], [2, 2, 2], [3, 3, 3], run_unique=False).out,
+            )
+            pd.testing.assert_frame_equal(
+                F.from_apply_func(apply_func).run(ts, 2, 3, run_unique=True).out,
+                F.from_apply_func(apply_func).run(ts, 2, 3, run_unique=False).out,
+            )
+            pd.testing.assert_frame_equal(
+                F.from_apply_func(apply_func).run(ts, [2, 2, 2], [3, 3, 3], run_unique=True).out,
+                F.from_apply_func(apply_func).run(ts, [2, 2, 2], [3, 3, 3], run_unique=False).out,
+            )
+            pd.testing.assert_frame_equal(
+                F.from_apply_func(apply_func).run(ts, [2, 3, 4], [4, 3, 2], run_unique=True).out,
+                F.from_apply_func(apply_func).run(ts, [2, 3, 4], [4, 3, 2], run_unique=False).out,
+            )
 
     def test_run_combs(self):
         # itertools.combinations
@@ -1518,221 +1519,225 @@ class TestFactory:
         )
 
     def test_numeric_attr(self):
-        obj = (
-            vbt.IndicatorFactory(input_names=["ts"], param_names=["p"], output_names=["out"])
-            .from_apply_func(lambda ts, p: ts * p)
-            .run(ts, 1)
-        )
+        with pytest.warns(UserWarning, match='Object has multiple columns|Metric .* returned multiple values|Metric .* requires benchmark_rets|Changing the (mapping|frequency|year frequency) will create a copy|Metric .* does not support grouped data|Metric .* raised an exception'):
+            obj = (
+                vbt.IndicatorFactory(input_names=["ts"], param_names=["p"], output_names=["out"])
+                .from_apply_func(lambda ts, p: ts * p)
+                .run(ts, 1)
+            )
 
-        pd.testing.assert_frame_equal(obj.out_above(2), obj.out > 2)
-        target = pd.DataFrame(
-            np.array(
-                [
-                    [False, True, False, False, True, False],
-                    [False, True, False, False, True, False],
-                    [True, True, True, False, False, False],
-                    [True, False, False, True, False, False],
-                    [True, False, False, True, False, False],
-                ]
-            ),
-            index=ts.index,
-            columns=pd.MultiIndex.from_tuples(
-                [
-                    (2, 1, "a"),
-                    (2, 1, "b"),
-                    (2, 1, "c"),
-                    (3, 1, "a"),
-                    (3, 1, "b"),
-                    (3, 1, "c"),
-                ],
-                names=["custom_out_above", "custom_p", None],
-            ),
-        )
-        pd.testing.assert_frame_equal(obj.out_above([2, 3]), target)
-        columns = target.columns.set_names("my_above", level=0)
-        pd.testing.assert_frame_equal(
-            obj.out_above([2, 3], level_name="my_above"),
-            pd.DataFrame(target.values, index=target.index, columns=columns),
-        )
-        pd.testing.assert_frame_equal(
-            obj.out_crossed_above(2),
-            pd.DataFrame(
+            pd.testing.assert_frame_equal(obj.out_above(2), obj.out > 2)
+            target = pd.DataFrame(
                 np.array(
                     [
-                        [False, False, False],
-                        [False, False, False],
-                        [True, False, True],
-                        [False, False, False],
-                        [False, False, False],
+                        [False, True, False, False, True, False],
+                        [False, True, False, False, True, False],
+                        [True, True, True, False, False, False],
+                        [True, False, False, True, False, False],
+                        [True, False, False, True, False, False],
                     ]
                 ),
                 index=ts.index,
                 columns=pd.MultiIndex.from_tuples(
                     [
-                        (1, "a"),
-                        (1, "b"),
-                        (1, "c"),
+                        (2, 1, "a"),
+                        (2, 1, "b"),
+                        (2, 1, "c"),
+                        (3, 1, "a"),
+                        (3, 1, "b"),
+                        (3, 1, "c"),
                     ],
-                    names=["custom_p", None],
+                    names=["custom_out_above", "custom_p", None],
                 ),
-            ),
-        )
-        pd.testing.assert_series_equal(
-            obj.out_stats(),
-            pd.Series(
-                [
-                    pd.Timestamp("2018-01-01 00:00:00"),
-                    pd.Timestamp("2018-01-05 00:00:00"),
-                    pd.Timedelta("5 days 00:00:00"),
-                    5.0,
-                    2.6,
-                    1.3329792289008184,
-                    1.0,
-                    2.6666666666666665,
-                    4.333333333333333,
-                ],
-                index=pd.Index(
-                    ["Start", "End", "Period", "Count", "Mean", "Std", "Min", "Median", "Max"], dtype="object"
+            )
+            pd.testing.assert_frame_equal(obj.out_above([2, 3]), target)
+            columns = target.columns.set_names("my_above", level=0)
+            pd.testing.assert_frame_equal(
+                obj.out_above([2, 3], level_name="my_above"),
+                pd.DataFrame(target.values, index=target.index, columns=columns),
+            )
+            pd.testing.assert_frame_equal(
+                obj.out_crossed_above(2),
+                pd.DataFrame(
+                    np.array(
+                        [
+                            [False, False, False],
+                            [False, False, False],
+                            [True, False, True],
+                            [False, False, False],
+                            [False, False, False],
+                        ]
+                    ),
+                    index=ts.index,
+                    columns=pd.MultiIndex.from_tuples(
+                        [
+                            (1, "a"),
+                            (1, "b"),
+                            (1, "c"),
+                        ],
+                        names=["custom_p", None],
+                    ),
                 ),
-                name="agg_func_mean",
-            ),
-        )
+            )
+            pd.testing.assert_series_equal(
+                obj.out_stats(),
+                pd.Series(
+                    [
+                        pd.Timestamp("2018-01-01 00:00:00"),
+                        pd.Timestamp("2018-01-05 00:00:00"),
+                        pd.Timedelta("5 days 00:00:00"),
+                        5.0,
+                        2.6,
+                        1.3329792289008184,
+                        1.0,
+                        2.6666666666666665,
+                        4.333333333333333,
+                    ],
+                    index=pd.Index(
+                        ["Start", "End", "Period", "Count", "Mean", "Std", "Min", "Median", "Max"], dtype="object"
+                    ),
+                    name="agg_func_mean",
+                ),
+            )
 
     def test_boolean_attr(self):
-        obj = (
-            vbt.IndicatorFactory(
-                input_names=["ts"],
-                param_names=["p"],
-                output_names=["out"],
-                attr_settings=dict(out=dict(dtype=np.bool_)),
+        with pytest.warns(UserWarning, match='Object has multiple columns|Metric .* returned multiple values|Metric .* requires benchmark_rets|Changing the (mapping|frequency|year frequency) will create a copy|Metric .* does not support grouped data|Metric .* raised an exception'):
+            obj = (
+                vbt.IndicatorFactory(
+                    input_names=["ts"],
+                    param_names=["p"],
+                    output_names=["out"],
+                    attr_settings=dict(out=dict(dtype=np.bool_)),
+                )
+                .from_apply_func(lambda ts, p: ts > p)
+                .run(ts, 2)
             )
-            .from_apply_func(lambda ts, p: ts > p)
-            .run(ts, 2)
-        )
 
-        pd.testing.assert_frame_equal(obj.out_and(True), obj.out)
-        target = pd.DataFrame(
-            np.array(
-                [
-                    [False, False, False, False, True, False],
-                    [False, False, False, False, True, False],
-                    [False, False, False, True, True, True],
-                    [False, False, False, True, False, False],
-                    [False, False, False, True, False, False],
-                ]
-            ),
-            index=ts.index,
-            columns=pd.MultiIndex.from_tuples(
-                [
-                    (False, 2, "a"),
-                    (False, 2, "b"),
-                    (False, 2, "c"),
-                    (True, 2, "a"),
-                    (True, 2, "b"),
-                    (True, 2, "c"),
-                ],
-                names=["custom_out_and", "custom_p", None],
-            ),
-        )
-        pd.testing.assert_frame_equal(obj.out_and([False, True]), target)
-        columns = target.columns.set_names("my_and", level=0)
-        pd.testing.assert_frame_equal(
-            obj.out_and([False, True], level_name="my_and"),
-            pd.DataFrame(target.values, index=target.index, columns=columns),
-        )
-        pd.testing.assert_series_equal(
-            obj.out_stats(),
-            pd.Series(
-                [
-                    pd.Timestamp("2018-01-01 00:00:00"),
-                    pd.Timestamp("2018-01-05 00:00:00"),
-                    pd.Timedelta("5 days 00:00:00"),
-                    2.3333333333333335,
-                    46.666666666666664,
-                    pd.Timestamp("2018-01-02 08:00:00"),
-                    pd.Timestamp("2018-01-03 16:00:00"),
-                    0.0,
-                    pd.Timedelta("1 days 00:00:00"),
-                    pd.Timedelta("1 days 00:00:00"),
-                    pd.Timedelta("1 days 00:00:00"),
-                    pd.Timedelta("0 days 00:00:00"),
-                    1.0,
-                    55.55555555555555,
-                    pd.Timedelta("2 days 08:00:00"),
-                    pd.Timedelta("2 days 08:00:00"),
-                    pd.Timedelta("2 days 08:00:00"),
-                    pd.NaT,
-                    pd.NaT,
-                    pd.NaT,
-                    pd.NaT,
-                    pd.NaT,
-                ],
-                index=pd.Index(
+            pd.testing.assert_frame_equal(obj.out_and(True), obj.out)
+            target = pd.DataFrame(
+                np.array(
                     [
-                        "Start",
-                        "End",
-                        "Period",
-                        "Total",
-                        "Rate [%]",
-                        "First Index",
-                        "Last Index",
-                        "Norm Avg Index [-1, 1]",
-                        "Distance: Min",
-                        "Distance: Max",
-                        "Distance: Mean",
-                        "Distance: Std",
-                        "Total Partitions",
-                        "Partition Rate [%]",
-                        "Partition Length: Min",
-                        "Partition Length: Max",
-                        "Partition Length: Mean",
-                        "Partition Length: Std",
-                        "Partition Distance: Min",
-                        "Partition Distance: Max",
-                        "Partition Distance: Mean",
-                        "Partition Distance: Std",
-                    ],
-                    dtype="object",
+                        [False, False, False, False, True, False],
+                        [False, False, False, False, True, False],
+                        [False, False, False, True, True, True],
+                        [False, False, False, True, False, False],
+                        [False, False, False, True, False, False],
+                    ]
                 ),
-                name="agg_func_mean",
-            ),
-        )
+                index=ts.index,
+                columns=pd.MultiIndex.from_tuples(
+                    [
+                        (False, 2, "a"),
+                        (False, 2, "b"),
+                        (False, 2, "c"),
+                        (True, 2, "a"),
+                        (True, 2, "b"),
+                        (True, 2, "c"),
+                    ],
+                    names=["custom_out_and", "custom_p", None],
+                ),
+            )
+            pd.testing.assert_frame_equal(obj.out_and([False, True]), target)
+            columns = target.columns.set_names("my_and", level=0)
+            pd.testing.assert_frame_equal(
+                obj.out_and([False, True], level_name="my_and"),
+                pd.DataFrame(target.values, index=target.index, columns=columns),
+            )
+            pd.testing.assert_series_equal(
+                obj.out_stats(),
+                pd.Series(
+                    [
+                        pd.Timestamp("2018-01-01 00:00:00"),
+                        pd.Timestamp("2018-01-05 00:00:00"),
+                        pd.Timedelta("5 days 00:00:00"),
+                        2.3333333333333335,
+                        46.666666666666664,
+                        pd.Timestamp("2018-01-02 08:00:00"),
+                        pd.Timestamp("2018-01-03 16:00:00"),
+                        0.0,
+                        pd.Timedelta("1 days 00:00:00"),
+                        pd.Timedelta("1 days 00:00:00"),
+                        pd.Timedelta("1 days 00:00:00"),
+                        pd.Timedelta("0 days 00:00:00"),
+                        1.0,
+                        55.55555555555555,
+                        pd.Timedelta("2 days 08:00:00"),
+                        pd.Timedelta("2 days 08:00:00"),
+                        pd.Timedelta("2 days 08:00:00"),
+                        pd.NaT,
+                        pd.NaT,
+                        pd.NaT,
+                        pd.NaT,
+                        pd.NaT,
+                    ],
+                    index=pd.Index(
+                        [
+                            "Start",
+                            "End",
+                            "Period",
+                            "Total",
+                            "Rate [%]",
+                            "First Index",
+                            "Last Index",
+                            "Norm Avg Index [-1, 1]",
+                            "Distance: Min",
+                            "Distance: Max",
+                            "Distance: Mean",
+                            "Distance: Std",
+                            "Total Partitions",
+                            "Partition Rate [%]",
+                            "Partition Length: Min",
+                            "Partition Length: Max",
+                            "Partition Length: Mean",
+                            "Partition Length: Std",
+                            "Partition Distance: Min",
+                            "Partition Distance: Max",
+                            "Partition Distance: Mean",
+                            "Partition Distance: Std",
+                        ],
+                        dtype="object",
+                    ),
+                    name="agg_func_mean",
+                ),
+            )
 
     def test_mapping_attr(self):
-        TestEnum = namedtuple("TestEnum", ["Hello", "World"])(0, 1)
-        obj = (
-            vbt.IndicatorFactory(output_names=["out"], attr_settings=dict(out=dict(dtype=TestEnum)))
-            .from_apply_func(lambda: np.array([[0, 1], [1, -1]]))
-            .run()
-        )
+        with pytest.warns(UserWarning, match='Object has multiple columns|Metric .* returned multiple values|Metric .* requires benchmark_rets|Changing the (mapping|frequency|year frequency) will create a copy|Metric .* does not support grouped data|Metric .* raised an exception'):
+            TestEnum = namedtuple("TestEnum", ["Hello", "World"])(0, 1)
+            obj = (
+                vbt.IndicatorFactory(output_names=["out"], attr_settings=dict(out=dict(dtype=TestEnum)))
+                .from_apply_func(lambda: np.array([[0, 1], [1, -1]]))
+                .run()
+            )
 
-        pd.testing.assert_frame_equal(obj.out_readable, pd.DataFrame([["Hello", "World"], ["World", None]]))
-        pd.testing.assert_series_equal(
-            obj.out_stats(),
-            pd.Series(
-                [0.0, 1.0, 2.0, 0.5, 0.5, 1.0],
-                index=pd.Index(
-                    ["Start", "End", "Period", "Value Counts: None", "Value Counts: Hello", "Value Counts: World"],
-                    dtype="object",
+            pd.testing.assert_frame_equal(obj.out_readable, pd.DataFrame([["Hello", "World"], ["World", None]]))
+            pd.testing.assert_series_equal(
+                obj.out_stats(),
+                pd.Series(
+                    [0.0, 1.0, 2.0, 0.5, 0.5, 1.0],
+                    index=pd.Index(
+                        ["Start", "End", "Period", "Value Counts: None", "Value Counts: Hello", "Value Counts: World"],
+                        dtype="object",
+                    ),
+                    name="agg_func_mean",
                 ),
-                name="agg_func_mean",
-            ),
-        )
+            )
 
     def test_stats(self):
-        @njit
-        def apply_func_nb(ts):
-            return ts**2, ts**3
+        with pytest.warns(UserWarning, match='Object has multiple columns|Metric .* returned multiple values|Metric .* requires benchmark_rets|Changing the (mapping|frequency|year frequency) will create a copy|Metric .* does not support grouped data|Metric .* raised an exception'):
+            @njit
+            def apply_func_nb(ts):
+                return ts**2, ts**3
 
-        MyInd = vbt.IndicatorFactory(
-            input_names=["ts"],
-            output_names=["out1", "out2"],
-            metrics=dict(sum_diff=dict(calc_func=lambda self, const: self.out2.sum() * self.out1.sum() + const)),
-            stats_defaults=dict(settings=dict(const=1000)),
-        ).from_apply_func(apply_func_nb)
+            MyInd = vbt.IndicatorFactory(
+                input_names=["ts"],
+                output_names=["out1", "out2"],
+                metrics=dict(sum_diff=dict(calc_func=lambda self, const: self.out2.sum() * self.out1.sum() + const)),
+                stats_defaults=dict(settings=dict(const=1000)),
+            ).from_apply_func(apply_func_nb)
 
-        myind = MyInd.run(ts)
-        pd.testing.assert_series_equal(myind.stats(), pd.Series([9535.0], index=["sum_diff"], name="agg_func_mean"))
+            myind = MyInd.run(ts)
+            pd.testing.assert_series_equal(myind.stats(), pd.Series([9535.0], index=["sum_diff"], name="agg_func_mean"))
 
     def test_dir(self):
         TestEnum = namedtuple("TestEnum", ["Hello", "World"])(0, 1)

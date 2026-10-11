@@ -14,7 +14,7 @@ try:
 except:
     ray_available = False
 
-day_dt = np.timedelta64(86400000000000)
+day_dt = np.timedelta64(86400000000000, "ns")
 
 # Initialize global variables
 a1 = np.array([1])
