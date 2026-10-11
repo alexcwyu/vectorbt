@@ -3,9 +3,12 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 import pytest
+from scipy.stats import kurtosis, norm, skew
 
 import vectorbt as vbt
+from vectorbt import _engine
 from tests.utils import isclose
+from vectorbt.returns.metrics import approx_exp_max_sharpe
 
 qs_available = True
 try:
@@ -292,12 +295,50 @@ class TestAccessors:
     def test_deflated_sharpe_ratio(self):
         pd.testing.assert_series_equal(
             rets.vbt.returns.deflated_sharpe_ratio(risk_free=0.01),
-            pd.Series([np.nan, np.nan, 0.0005355605507117676], index=rets.columns, name="deflated_sharpe_ratio"),
+            pd.Series(
+                [0.2374973566617728, 5.910048655681186e-16, 0.0032783041604936523],
+                index=rets.columns,
+                name="deflated_sharpe_ratio",
+            ),
         )
         pd.testing.assert_series_equal(
             rets.vbt.returns.deflated_sharpe_ratio(risk_free=0.03),
-            pd.Series([np.nan, np.nan, 0.0003423112350834066], index=rets.columns, name="deflated_sharpe_ratio"),
+            pd.Series(
+                [0.15146264148773053, 5.864288083101271e-16, 0.002229547585230213],
+                index=rets.columns,
+                name="deflated_sharpe_ratio",
+            ),
         )
+
+    def test_deflated_sharpe_ratio_reference(self):
+        np.random.seed(seed)
+        n = 500
+        arr = np.random.standard_t(4, size=(n, 3)) * 0.01 + 0.001
+        arr[np.random.uniform(size=(n, 3)) < 0.05] = np.nan
+        acc = pd.DataFrame(arr, index=pd.date_range("2020", periods=n)).vbt.returns(freq="D", year_freq="365 days")
+        sharpe = acc.sharpe_ratio().values
+        sr = sharpe / np.sqrt(365)
+        sr0 = approx_exp_max_sharpe(0, np.var(sharpe, ddof=1) / 365, 3)
+        t = np.sum(~np.isnan(arr), axis=0)
+        g3 = skew(arr, nan_policy="omit")
+        g4 = kurtosis(arr, fisher=False, nan_policy="omit")
+        np.testing.assert_allclose(
+            acc.deflated_sharpe_ratio().values,
+            norm.cdf((sr - sr0) * np.sqrt(t - 1) / np.sqrt(1 - g3 * sr + (g4 - 1) / 4 * sr**2)),
+        )
+
+    def test_deflated_sharpe_ratio_nan(self):
+        np.random.seed(seed)
+        n = 300
+        df = pd.DataFrame(np.random.standard_t(4, size=(n, 3)) * 0.01 + 0.001, index=pd.date_range("2020", periods=n))
+        df.iloc[10:60, 0] = np.nan
+
+        def dsr(obj):
+            acc = obj.vbt.returns(freq="D", year_freq="365 days")
+            return acc.deflated_sharpe_ratio(risk_free=0.0, var_sharpe=0.01, nb_trials=5).iloc[0]
+
+        assert dsr(df) == pytest.approx(dsr(df.dropna()), rel=1e-12)
+        assert dsr(df) != pytest.approx(dsr(df.fillna(0.0)), rel=1e-3)
 
     def test_downside_risk(self):
         assert isclose(rets["a"].vbt.returns.downside_risk(required_return=0.1), 0.0)
@@ -477,6 +518,51 @@ class TestAccessors:
             ),
         )
 
+    def test_cond_value_at_risk_nan(self):
+        arr = np.array(
+            [-0.05, 0.01, np.nan, -0.02, 0.03, 0.02, -0.01, 0.04, -0.03, 0.0]
+            + [0.01, 0.02, -0.04, 0.01, 0.02, 0.03, -0.02, 0.01, 0.0, 0.02, 0.01]
+        ).reshape(-1, 1)
+        clean = arr[~np.isnan(arr[:, 0])]
+        result = vbt.returns.nb.cond_value_at_risk_nb(arr, 0.1)
+        np.testing.assert_allclose(result, vbt.returns.nb.cond_value_at_risk_nb(clean, 0.1))
+        np.testing.assert_allclose(result, [np.mean([-0.05, -0.04])])
+        assert np.isnan(vbt.returns.nb.cond_value_at_risk_nb(np.full((3, 1), np.nan), 0.1)[0])
+        assert np.isnan(vbt.returns.nb.cond_value_at_risk_nb(np.empty((0, 1)), 0.1)[0])
+
+    def test_rolling_cond_value_at_risk_nan(self):
+        arr = np.array([-0.05, 0.01, np.nan, -0.02, 0.03, 0.02, -0.01, 0.04, -0.03, 0.0, 0.01, np.nan, -0.04]).reshape(
+            -1, 1
+        )
+        window = 6
+        result = vbt.returns.nb.rolling_cond_value_at_risk_nb(arr, window, 1, 0.2)
+        expected = np.full(len(arr), np.nan)
+        for i in range(len(arr)):
+            chunk = arr[max(0, i - window + 1) : i + 1, 0]
+            chunk = chunk[~np.isnan(chunk)]
+            if len(chunk) > 0:
+                k = int((len(chunk) - 1) * 0.2)
+                expected[i] = np.sort(chunk)[: k + 1].mean()
+        np.testing.assert_allclose(result[:, 0], expected)
+
+    @pytest.mark.skipif(not _engine.is_rust_available(), reason="vectorbt-rust is not installed or version-compatible")
+    def test_cond_value_at_risk_nan_rust(self):
+        arr = np.array(
+            [-0.05, 0.01, np.nan, -0.02, 0.03, 0.02, -0.01, 0.04, -0.03, 0.0]
+            + [0.01, 0.02, -0.04, 0.01, 0.02, 0.03, -0.02, 0.01, 0.0, 0.02, 0.01]
+        ).reshape(-1, 1)
+        np.testing.assert_allclose(
+            vbt.returns.dispatch.cond_value_at_risk(arr, 0.1, engine="rust"),
+            vbt.returns.nb.cond_value_at_risk_nb(arr, 0.1),
+        )
+        all_nan = np.full((3, 1), np.nan)
+        assert np.isnan(vbt.returns.dispatch.cond_value_at_risk(all_nan, 0.1, engine="rust")[0])
+        np.testing.assert_allclose(
+            vbt.returns.dispatch.rolling_cond_value_at_risk(arr, 6, 1, 0.2, engine="rust"),
+            vbt.returns.nb.rolling_cond_value_at_risk_nb(arr, 6, 1, 0.2),
+            equal_nan=True,
+        )
+
     def test_capture(self):
         assert isclose(rets["a"].vbt.returns.capture(benchmark_rets["a"]), 0.0007435597416888084)
         pd.testing.assert_series_equal(
@@ -593,7 +679,9 @@ class TestAccessors:
         assert rets["a"].vbt.returns.drawdowns.wrapper.freq == rets["a"].vbt.wrapper.freq
         assert rets["a"].vbt.returns.drawdowns.wrapper.ndim == rets["a"].ndim
         assert rets.vbt.returns.drawdowns.wrapper.ndim == rets.ndim
-        assert isclose(rets["a"].vbt.returns.drawdowns.max_drawdown(), rets["a"].vbt.returns.max_drawdown())
+        assert isclose(
+            rets["a"].vbt.returns.drawdowns.max_drawdown(fill_value=0.0), rets["a"].vbt.returns.max_drawdown()
+        )
         pd.testing.assert_series_equal(
             rets.vbt.returns.drawdowns.max_drawdown(fill_value=0.0), rets.vbt.returns.max_drawdown()
         )

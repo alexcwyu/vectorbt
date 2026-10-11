@@ -1,156 +1,47 @@
-# vectorbt
+# Documentation
 
-> **Last Updated**: 2026-04-06T16:25:30Z  \
-> **Git Hash**: `eb00ac20`
+This directory contains documentation for vectorbt.
 
-> Vectorized backtesting and quantitative analytics framework built on NumPy, Pandas, and Numba.
+It is built using [Zensical](https://zensical.org/) and hosted on https://vectorbt.dev/.
 
-**Version**: 1.0.0
-**Author**: Oleg Polakow
-**License**: Apache 2.0 with Commons Clause
-**Python**: >= 3.13
+## Build and preview
 
-## Overview
+From the repository root, using Python 3.11 or newer:
 
-vectorbt is a Python library for backtesting and analyzing trading strategies at scale. It leverages NumPy and Pandas for vectorized computations and Numba for JIT-compiled simulation kernels, enabling users to evaluate thousands of parameter combinations in seconds rather than hours. Unlike event-driven frameworks that iterate tick-by-tick, vectorbt operates on entire arrays simultaneously, making it orders of magnitude faster for parameter sweeps and portfolio analysis.
-
-The library provides three simulation modes (`from_orders`, `from_signals`, `from_order_func`), a flexible indicator factory for building custom technical indicators, a sparse records system for memory-efficient event storage, and integrated plotting via Plotly.
-
-## Official Links
-
-| Resource | URL |
-|----------|-----|
-| GitHub | https://github.com/polakowo/vectorbt |
-| Documentation | https://vectorbt.dev |
-| Bug Tracker | https://github.com/polakowo/vectorbt/issues |
-
-## Quick Start
-
-Run an MA crossover backtest with inline data -- no external files or API keys required:
-
-```python
-import numpy as np
-import pandas as pd
-import vectorbt as vbt
-
-# Generate synthetic price series
-np.random.seed(42)
-dates = pd.date_range("2020-01-01", periods=500, freq="B")
-close = pd.Series(
-    100 * np.cumprod(1 + np.random.randn(500) * 0.01),
-    index=dates, name="Price"
-)
-
-# Compute fast and slow moving averages
-fast_ma = close.rolling(10).mean()
-slow_ma = close.rolling(30).mean()
-
-# Generate entry/exit signals from MA crossover
-entries = (fast_ma > slow_ma) & (fast_ma.shift(1) <= slow_ma.shift(1))
-exits = (fast_ma < slow_ma) & (fast_ma.shift(1) >= slow_ma.shift(1))
-
-# Simulate portfolio
-pf = vbt.Portfolio.from_signals(
-    close, entries=entries, exits=exits,
-    init_cash=10_000, fees=0.001, freq="1D"
-)
-print(pf.stats())
+```sh
+python -m pip install -e ".[full,docs]"
+cd docs
+python generate_api.py
+python update_api_nav.py
+zensical build --strict
+zensical serve
 ```
 
-## Architecture Summary
+The editable install is important: the API generator must import this checkout of
+`vectorbt`. Re-run both Python scripts after changing the API. Generated API
+Markdown, the site output, and Zensical's cache are ignored by Git. The navigation
+script updates the `API` section in `zensical.toml`; keep its generated entries out of
+commits. GitHub Actions runs the same generation and strict-build steps and deploys
+`site/` through GitHub Pages.
 
-vectorbt follows a layered architecture where raw data flows through indicators and signal generators into a portfolio simulator. The simulator produces sparse records (orders, trades, logs) that are analyzed through a metrics and statistics layer, with results visualized via Plotly.
+## Website configuration and content
 
-```mermaid
-graph TB
-    subgraph "Data Layer"
-        D[Data Sources<br/>YF, Binance, CCXT, Alpaca]
-        DD[Data Base Class]
-    end
+- `zensical.toml`: Zensical configuration, navigation, Markdown extensions, analytics,
+  and theme settings.
+- `docs/`: Markdown pages and static assets, including interactive chart HTML.
+- `generate_api.py` and `templates/markdown.mako`: API Markdown generation and
+  formatting.
+- `update_api_nav.py`: updates navigation from the generated API Markdown; run it
+  separately after the generator.
+- `overrides/main.html`: announcement, sponsor footer, social metadata, and icons.
+- `docs/assets/stylesheets/extra.css`: styles for custom website components.
 
-    subgraph "Analysis Layer"
-        I[Indicator Factory]
-        S[Signal Factory]
-        BI[Built-in Indicators<br/>MA, RSI, BBANDS, MACD, etc.]
-    end
+Run `zensical build --strict` before submitting website changes, and use
+`zensical serve` to check affected pages and interactions in the browser.
 
-    subgraph "Simulation Layer"
-        PF[Portfolio]
-        NB[Numba Kernels<br/>portfolio.nb]
-        EN[Enums & State Types]
-    end
-
-    subgraph "Records Layer"
-        R[Records / MappedArray]
-        OR[Order Records]
-        TR[Trade Records]
-        LR[Log Records]
-        DD2[Drawdowns]
-    end
-
-    subgraph "Output Layer"
-        ST[Stats Builder]
-        PL[Plots Builder]
-        PLT[Plotly Figures]
-    end
-
-    D --> DD --> I
-    DD --> S
-    I --> BI
-    BI --> S
-    S --> PF
-    PF --> NB
-    NB --> EN
-    NB --> OR
-    NB --> TR
-    NB --> LR
-    OR --> R
-    TR --> R
-    LR --> R
-    R --> DD2
-    R --> ST
-    R --> PL
-    PL --> PLT
-```
-
-## Core Components
-
-| Component | Module | Description |
-|-----------|--------|-------------|
-| **Portfolio** | `portfolio.base` | Core simulation engine with `from_orders`, `from_signals`, `from_order_func` modes |
-| **Numba Kernels** | `portfolio.nb` | JIT-compiled order processing, buy/sell execution, simulation loops |
-| **Indicator Factory** | `indicators.factory` | Meta-programming factory for creating vectorized indicator classes |
-| **Signal Factory** | `signals.factory` | Extends IndicatorFactory for entry/exit signal generation |
-| **Records** | `records.base` | Sparse event storage (orders, trades, positions, drawdowns) |
-| **MappedArray** | `records.mapped_array` | Column-mapped arrays for efficient record querying |
-| **Data** | `data.base` | Base data fetching with symbol dictionary support |
-| **Data Sources** | `data.custom` | YFData, BinanceData, CCXTData, AlpacaData, SyntheticData, GBMData |
-| **ArrayWrapper** | `base.array_wrapper` | Pandas-aware wrapper preserving index/column metadata |
-| **Settings** | `_settings` | Global hierarchical configuration system |
-| **Generic** | `generic` | Drawdowns, ranges, splitters, stats/plots builders |
-| **Returns** | `returns` | Return-based metrics and analysis |
-| **Labels** | `labels` | Labeling utilities for ML-based strategies |
-| **Messaging** | `messaging` | Telegram bot integration for alerts |
-| **Utils** | `utils` | Config, caching, decorators, datetime, math, templates |
-
-## Built-in Indicators
-
-MA, MSTD, BBANDS, RSI, STOCH, MACD, ATR, OBV -- plus adapters for TA-Lib, pandas-ta, and the `ta` library via `IndicatorFactory.from_talib()`, `.from_pandas_ta()`, `.from_ta()`.
-
-## Built-in Signal Generators
-
-RAND, RANDX, RANDNX, RPROB, RPROBX, RPROBCX, RPROBNX, STX, STCX, OHLCSTX, OHLCSTCX -- random and stop-loss/take-profit signal generators.
-
-## Related Documentation
-
-- [Architecture](architecture.md) -- System design, class hierarchy, vectorized computation approach
-- [Workflow](workflow.md) -- Backtesting pipeline, signal generation, portfolio simulation flows
-- [State Management](state-management.md) -- Portfolio state tracking, records, caching
-- [Development](development.md) -- Setup, custom indicators, custom signals, performance tips
-
-## Building the Documentation Site
-
-The documentation site in this directory is built using [mkdocs-material](https://squidfunk.github.io/mkdocs-material/) and hosted on https://vectorbt.dev/.
+The API generator can warn about dynamically generated classes and unresolved
+docstring references. Review these separately from Zensical's strict build
+validation.
 
 ## License
 

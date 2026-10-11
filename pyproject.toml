@@ -4,81 +4,78 @@ build-backend = "hatchling.build"
 
 [project]
 name = "vectorbt"
-version = "1.0.0"
+version = "1.1.2"
 description = "Python library for backtesting and analyzing trading strategies at scale"
 readme = "README.md"
-requires-python = ">=3.13"
-license = { text = "Apache 2.0 with Commons Clause" }
+license-files = ["LICENSE.md"]
 authors = [
-    { name = "Oleg Polakow", email = "olegpolakow@gmail.com" },
+    {name = "Oleg Polakow", email = "olegpolakow@vectorbt.pro"}
 ]
-keywords = ["trading", "backtesting", "algorithmic-trading", "technical-analysis", "quantitative-finance"]
+requires-python = ">=3.13,<3.16"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Intended Audience :: Financial and Insurance Industry",
-    "License :: Free for non-commercial use",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Operating System :: OS Independent",
     "Intended Audience :: Science/Research",
     "Topic :: Software Development",
     "Topic :: Office/Business :: Financial",
     "Topic :: Scientific/Engineering :: Information Analysis",
 ]
-
 dependencies = [
-    "numpy>=2.3.4",
-    "pandas>=2.3.3",
-    "scipy>=1.16.3",
-    "matplotlib>=3.10.7",
-    "plotly>=6.4.0",
-    "ipywidgets>=8.1.8",
-    "numba>=0.62.1",
-    "dill>=0.3.9",
-    "tqdm>=4.67.1",
-    "dateparser>=1.2.0",
-    "imageio>=2.37.0",
-    "scikit-learn>=1.7.2",
-    "schedule>=1.2.2",
-    "requests>=2.32.5",
-    "pytz>=2025.2",
-    "mypy-extensions>=1.1.0",
+    "numpy>=2.4.6",
+    "pandas>=3.0.3,<4.0",
+    "scipy",
+    "matplotlib",
+    "plotly>=4.12.0",
+    "ipywidgets>=7.0.0",
+    "anywidget",
+    "numba>=0.66",
+    "dill",
+    "tqdm",
+    "dateparser",
+    "imageio",
+    "scikit-learn",
+    "schedule",
+    "requests",
+    "pytz",
+    "mypy_extensions",
 ]
 
 [project.optional-dependencies]
 rust = [
-    "vectorbt-rust==1.0.0",
-]
-full-no-talib = [
-    "yfinance>=0.2.52",
-    "python-binance>=1.0.23",
-    "ccxt>=4.5.7",
-    "alpaca-py>=0.36.1",
-    "ray>=2.42.0",
-    "ta>=0.11.0",
-    # pandas-ta requires numba==0.61.2 which is incompatible with Python 3.13
-    # "pandas-ta>=0.3.14b0",
-    "python-telegram-bot>=21.10",
-    "quantstats>=0.0.77",
+    "vectorbt-rust==1.1.2",
 ]
 full = [
-    "vectorbt[full-no-talib]",
-    "TA-Lib>=0.5.1",
+    "TA-Lib",
+    "yfinance>=0.2.22",
+    "python-binance",
+    "ccxt>=4.0.14",
+    "alpaca-py",
+    "ray>=1.4.1",
+    "ta",
+    "pandas-ta-classic",
+    "python-telegram-bot>=13.4",
+    "quantstats>=0.0.37",
+    "kaleido>=1",
 ]
 test = [
-    "pytest>=9.0.1",
-    "pytest-cov>=6.0.0",
+    "pytest",
+    "pytest-cov",
     "pytest-xdist",
-    "codecov>=2.1.13",
+    "codecov",
 ]
 test-rust = [
     "vectorbt[test]",
-    "maturin>=1.7,<2.0",
+    "maturin>=1.14,<2.0",
 ]
 docs = [
-    "mkdocs-material",
-    "mkdocs-minify-plugin",
-    "ruamel.yaml",
+    "zensical>=0.0.62",
+    "tomlkit>=0.13",
     "mako",
 ]
 all = [
@@ -90,9 +87,6 @@ all = [
 
 [project.urls]
 Homepage = "https://github.com/polakowo/vectorbt"
-Documentation = "https://vectorbt.dev"
-Repository = "https://github.com/polakowo/vectorbt"
-"Bug Tracker" = "https://github.com/polakowo/vectorbt/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/vectorbt"]
@@ -154,3 +148,6 @@ testpaths = ["tests"]
 pythonpath = ["src"]
 xfail_strict = true
 filterwarnings = ["error"]
+
+[tool.uv.sources]
+vectorbt-rust = { path = "rust" }

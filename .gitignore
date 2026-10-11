@@ -35,10 +35,10 @@ rust/target/
 apps/candlestick-patterns/data
 docs/docs/api
 docs/site/
+docs/.cache/
 
 # Lock files
 uv.lock
 
 # Private
 .mcp.json
-development.md

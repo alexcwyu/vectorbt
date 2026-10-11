@@ -22,8 +22,8 @@ from plotly.basedatatypes import BaseFigure
 
 import vectorbt as vbt
 from vectorbt.generic.plotting import Scatter, Bar, Histogram, Heatmap, Gauge, Box, Volume, TraceUpdater
+from vectorbt.portfolio.base import Portfolio
 from vectorbt.utils.figure import make_figure, make_subplots, Figure, FigureWidget
-
 
 # ############# Fixtures ############# #
 
@@ -268,7 +268,7 @@ class TestFigureFactory:
         assert isinstance(fig, FigureWidget)
         assert isinstance(fig, BaseFigure)
 
-    def test_make_figure_returns_figure_when_widgets_disabled(self):
+    def test_make_figure_without_widgets(self):
         """Toggling use_widgets=False should return plain Figure."""
         old_val = vbt.settings.plotting["use_widgets"]
         try:
@@ -625,6 +625,45 @@ class TestTradesPlotPnl:
         # pct_scale=False: y-values are absolute PnL
         np.testing.assert_array_almost_equal(fig_abs.data[0].y, [1.78, 2.77])
 
+    def test_trades_plot_pnl_non_finite_returns(self):
+        """Non-finite returns should not invalidate Plotly marker metadata."""
+        # Cover the issue's exact case where no finite return is available for scaling.
+        open_pf = Portfolio.from_orders(
+            pd.Series([1.0, np.nan]),
+            pd.Series([1.0, 0.0]),
+            ffill_val_price=False,
+        )
+
+        # Exercise both the direct records API and its Portfolio convenience delegate.
+        for fig in (open_pf.get_trades().plot_pnl(), open_pf.plot_trade_pnl()):
+            assert isinstance(fig, BaseFigure)
+            nt = named_traces(fig)
+
+            # Without a finite reference, the open marker should use both lower bounds.
+            np.testing.assert_array_equal(nt["Open"].marker.size, [7.0])
+            np.testing.assert_array_equal(nt["Open"].marker.opacity, [0.75])
+
+        # One unknown open trade must not alter the scaling of finite closed trades.
+        close = pd.Series([1.0, 2.0, 1.0, 3.0, 1.0, np.nan])
+        size = pd.Series([1.0, -1.0, 1.0, -1.0, 1.0, 0.0])
+        pf = Portfolio.from_orders(close, size, ffill_val_price=False)
+
+        # Require identical marker behavior from the direct and delegated plotting paths.
+        for fig in (pf.get_trades().plot_pnl(), pf.plot_trade_pnl()):
+            assert isinstance(fig, BaseFigure)
+            nt = named_traces(fig)
+
+            # Finite trades keep their relative endpoints while the unknown trade uses the minima.
+            np.testing.assert_array_equal(nt["Closed - Profit"].marker.size, [7.0, 14.0])
+            np.testing.assert_array_equal(nt["Closed - Profit"].marker.opacity, [0.75, 0.9])
+            np.testing.assert_array_equal(nt["Open"].marker.size, [7.0])
+            np.testing.assert_array_equal(nt["Open"].marker.opacity, [0.75])
+
+            # Guard every emitted trace against metadata that Plotly would reject.
+            for trace in fig.data:
+                assert np.all(np.isfinite(trace.marker.size))
+                assert np.all(np.isfinite(trace.marker.opacity))
+
 
 class TestDrawdownsPlot:
     def test_drawdowns_plot_with_zones(self):
@@ -979,7 +1018,7 @@ class TestPortfolioPlots:
         expected_names = {"Close", "Buy", "Sell"}
         assert set(nt.keys()) == expected_names
 
-    def test_plots_grouped_warns_for_not_grouped_subplots(self):
+    def test_plots_grouped_warns_ungrouped(self):
         """Grouped portfolio should warn for subplots that don't support grouping."""
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
@@ -1220,6 +1259,12 @@ class TestPortfolioPlotSmoke:
         assert "Value" in nt
         assert isinstance(nt["Value"], go.Scatter)
         assert len(nt["Value"].y) == len(index_5)
+        # Custom benchmark returns should also work when plotting a selected portfolio column.
+        fig = pf_multi.plot_cum_returns(column="a", benchmark_rets=pf_multi["b"].returns())
+        nt = named_traces(fig)
+        assert "Benchmark" in nt
+        assert isinstance(nt["Benchmark"], go.Scatter)
+        assert len(nt["Benchmark"].y) == len(index_5)
 
     def test_smoke_plot_drawdowns(self):
         self._assert_fig(

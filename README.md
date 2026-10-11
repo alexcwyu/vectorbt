@@ -13,41 +13,38 @@
 
 <p align="center">
     <a href="https://pepy.tech/project/vectorbt" title="Downloads">
-        <img src="https://pepy.tech/badge/vectorbt" />
-    </a>
-    <a href="https://github.com/polakowo/vectorbt/stargazers" title="Stars">
-        <img src="https://img.shields.io/github/stars/polakowo/vectorbt?style=flat" />
-    </a>
-    <a href="https://github.com/polakowo/vectorbt/network/members" title="Forks">
-        <img src="https://img.shields.io/github/forks/polakowo/vectorbt?style=flat" />
-    </a>
-    <a href="https://github.com/polakowo/vectorbt/graphs/contributors" title="Contributors">
-        <img src="https://img.shields.io/github/contributors/polakowo/vectorbt?style=flat" />
+        <img src="https://img.shields.io/pepy/dt/vectorbt?label=downloads&color=blue" />
     </a>
     <a href="https://pypi.org/project/vectorbt" title="PyPI">
-        <img src="https://img.shields.io/pypi/v/vectorbt?color=blueviolet" />
+        <img src="https://img.shields.io/pypi/v/vectorbt" />
+    </a>
+    <a href="https://pypi.org/project/vectorbt" title="Supported Python versions">
+        <img src="https://img.shields.io/pypi/pyversions/vectorbt" />
+    </a>
+    <a href="https://hub.docker.com/r/polakowo/vectorbt" title="Docker image version">
+        <img src="https://img.shields.io/docker/v/polakowo/vectorbt?sort=semver&label=docker&color=2496ed&logo=docker&logoColor=white" />
+    </a>
+    <a href="https://hub.docker.com/r/polakowo/vectorbt" title="Docker pulls">
+        <img src="https://img.shields.io/docker/pulls/polakowo/vectorbt?label=docker%20pulls&color=2496ed&logo=docker&logoColor=white" />
+    </a>
+    <a href="https://github.com/polakowo/vectorbt/actions/workflows/tests.yml" title="Tests">
+        <img src="https://img.shields.io/github/actions/workflow/status/polakowo/vectorbt/tests.yml?branch=master&label=tests&logo=githubactions&logoColor=white" />
+    </a>
+    <a href="https://github.com/polakowo/vectorbt/actions/workflows/pypi.yml" title="PyPI release">
+        <img src="https://img.shields.io/github/actions/workflow/status/polakowo/vectorbt/pypi.yml?label=release&logo=githubactions&logoColor=white" />
+    </a>
+    <a href="https://vectorbt.dev/" title="Website">
+        <img src="https://img.shields.io/website?url=https%3A%2F%2Fvectorbt.dev%2F&label=website" />
+    </a>
+    <a href="https://pypi.org/project/vectorbt-rust" title="Rust engine">
+        <img src="https://img.shields.io/pypi/v/vectorbt-rust?label=rust%20engine&color=dea584&logo=rust" />
     </a>
     <a href="https://github.com/polakowo/vectorbt/blob/master/LICENSE.md" title="License">
         <img src="https://img.shields.io/badge/license-Fair%20Code-yellow" />
     </a>
-    <a href="https://codecov.io/gh/polakowo/vectorbt" title="codecov">
-        <img src="https://codecov.io/gh/polakowo/vectorbt/branch/master/graph/badge.svg?token=YTLNAI7PS3" />
-    </a>
-    <a href="https://vectorbt.dev/" title="Website">
-        <img src="https://img.shields.io/website?url=https://vectorbt.dev/" />
-    </a>
-    <a href="https://mybinder.org/v2/gh/polakowo/vectorbt/HEAD?urlpath=lab" title="Launch Binder">
-        <img src="https://img.shields.io/badge/launch-binder-d6604a" />
-    </a>
-    <a href="https://gitter.im/vectorbt/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge" title="Join the chat">
-        <img src="https://badges.gitter.im/vectorbt.svg" />
-    </a>
-    <a href="https://pypi.org/project/vectorbt" title="Supported Python versions">
-        <img src="https://img.shields.io/pypi/pyversions/vectorbt.svg?logo=python&logoColor=white" />
-    </a>
 </p>
 
-<h3 align="center"><b>Thinks in matrices. Backtests at scale.</b></h3>
+<h3 align="center"><b>Thinks in matrices, backtests at scale.</b></h3>
 
 <p align="center">VectorBT takes a radically different approach to backtesting: instead of looping through bars one strategy at a time, it packs thousands of configurations into NumPy arrays, accelerates the hot path with Numba and Rust, and runs them all at once, turning hours of grid search into seconds.</p>
 
@@ -55,7 +52,13 @@
 
 Explore thousands of trading ideas across assets and timeframes, analyze portfolio performance down to individual trades, and visualize results interactively, all in a few lines of code. Built for both human researchers and AI agents, VectorBT combines large-scale experimentation with a mature, battle-tested backtesting stack refined through years of community use.
 
-VectorBT is the open-source community edition of [VectorBT PRO](https://vectorbt.pro/), a state-of-the-art hybrid backtesting library.
+VectorBT is the open-source community edition of [VectorBT PRO](https://vectorbt.pro/).
+PRO extends the library with parallelization, additional data integrations, portfolio optimization,
+pattern recognition, event projections, limit orders, leverage, and over 100 other features,
+with new features added weekly.
+
+See [VectorBT vs PRO](https://vectorbt.dev/getting-started/upgrade/) or browse
+[PRO feature examples](https://vectorbt.pro/features/).
 
 ## Features
 
@@ -130,6 +133,13 @@ print(pf.total_profit())
 34417.80960086067
 ```
 
+> [!TIP]
+> **VectorBT PRO**
+>
+> Simulate [limit orders](https://vectorbt.pro/features/backtesting/orders-and-execution/#limit-orders),
+> use [leverage](https://vectorbt.pro/features/backtesting/fees-slippage-and-leverage/#leverage), and model futures with
+> [contract multipliers](https://vectorbt.pro/features/backtesting/fees-slippage-and-leverage/#contract-multiplier).
+
 ### Generate 1,000 random strategies
 
 ```python
@@ -170,6 +180,15 @@ fig.show()
 ```
 
 <img width="750" src="https://raw.githubusercontent.com/polakowo/vectorbt/master/docs/docs/assets/images/usage_dmac_heatmap.gif">
+
+> [!TIP]
+> **VectorBT PRO**
+>
+> Use [random search](https://vectorbt.pro/features/optimization/strategy-optimization/#random-search) to sample a large
+> parameter grid, or [conditional parameters](https://vectorbt.pro/features/optimization/strategy-optimization/#conditional-parameters)
+> to exclude combinations such as a fast MA window longer than the slow MA window. The
+> [cross-validation tutorial](https://vectorbt.pro/tutorials/cross-validation/)
+> shows how to select parameters on training data and evaluate them on later periods.
 
 ### Inspect any strategy configuration
 
@@ -278,9 +297,15 @@ If you have questions or want to request a license exception, please [contact th
 
 Installing optional dependencies may be subject to a more restrictive license.
 
-## Star history
+## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=polakowo/vectorbt&type=Timeline)](https://star-history.com/#polakowo/vectorbt&Timeline)
+<a href="https://www.star-history.com/?repos=polakowo%2Fvectorbt&type=timeline&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=polakowo/vectorbt&type=timeline&theme=dark&legend=top-left&sealed_token=482an5rek002Q4c3VCaRd7goV3LwR6GP6m56UOqTunBJKoEq19_RkbQldrL-OP4f5XnDtU9tOOTrs-NTtnqFoQoUZJdWPQEQ-eO2q1McxpYu-STLc1fj9tY60p-spkcSQ9bxs7WJkumrqYI1LSc3mBd7CIu2K7IuYNAgv1pYuFJOQaN1yD5p3wWNgcFM" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=polakowo/vectorbt&type=timeline&legend=top-left&sealed_token=482an5rek002Q4c3VCaRd7goV3LwR6GP6m56UOqTunBJKoEq19_RkbQldrL-OP4f5XnDtU9tOOTrs-NTtnqFoQoUZJdWPQEQ-eO2q1McxpYu-STLc1fj9tY60p-spkcSQ9bxs7WJkumrqYI1LSc3mBd7CIu2K7IuYNAgv1pYuFJOQaN1yD5p3wWNgcFM" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=polakowo/vectorbt&type=timeline&legend=top-left&sealed_token=482an5rek002Q4c3VCaRd7goV3LwR6GP6m56UOqTunBJKoEq19_RkbQldrL-OP4f5XnDtU9tOOTrs-NTtnqFoQoUZJdWPQEQ-eO2q1McxpYu-STLc1fj9tY60p-spkcSQ9bxs7WJkumrqYI1LSc3mBd7CIu2K7IuYNAgv1pYuFJOQaN1yD5p3wWNgcFM" />
+ </picture>
+</a>
 
 ## Disclaimer
 

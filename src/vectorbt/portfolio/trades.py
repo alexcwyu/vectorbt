@@ -17,6 +17,13 @@ of the entire symbol.
     All classes return both closed AND open trades/positions, which may skew your performance results.
     To only consider closed trades/positions, you should explicitly query the `closed` attribute.
 
+!!! tip "VectorBT PRO"
+
+    Track [MAE and MFE throughout each trade](https://vectorbt.pro/features/analytics/trade-analytics/#expanding-trade-metrics),
+    measure [edge ratio](https://vectorbt.pro/features/analytics/trade-analytics/#edge-ratio), and inspect
+    [trade history](https://vectorbt.pro/features/analytics/trade-analytics/#trade-history) with orders, entry trades,
+    exit trades, and positions in one table.
+
 ## Trade types
 
 There are three main types of trades.
@@ -531,9 +538,7 @@ trades_field_config = Config(
 )
 """_"""
 
-__pdoc__[
-    "trades_field_config"
-] = f"""Field config for `Trades`.
+__pdoc__["trades_field_config"] = f"""Field config for `Trades`.
 
 ```json
 {trades_field_config.to_doc()}
@@ -551,9 +556,7 @@ trades_attach_field_config = Config(
 )
 """_"""
 
-__pdoc__[
-    "trades_attach_field_config"
-] = f"""Config of fields to be attached to `Trades`.
+__pdoc__["trades_attach_field_config"] = f"""Config of fields to be attached to `Trades`.
 
 ```json
 {trades_attach_field_config.to_doc()}
@@ -634,8 +637,8 @@ class Trades(Ranges):
     @cached_method
     def profit_factor(self, group_by: tp.GroupByLike = None, wrap_kwargs: tp.KwargsLike = None) -> tp.MaybeSeries:
         """Profit factor."""
-        total_win = to_1d_array(self.winning.pnl.sum(group_by=group_by))
-        total_loss = to_1d_array(self.losing.pnl.sum(group_by=group_by))
+        total_win = to_1d_array(self.winning.pnl.sum(group_by=group_by)).copy()
+        total_loss = to_1d_array(self.losing.pnl.sum(group_by=group_by)).copy()
 
         # Otherwise columns with only wins or losses will become NaNs
         has_values = to_1d_array(self.count(group_by=group_by)) > 0
@@ -651,8 +654,8 @@ class Trades(Ranges):
     def expectancy(self, group_by: tp.GroupByLike = None, wrap_kwargs: tp.KwargsLike = None) -> tp.MaybeSeries:
         """Average profitability."""
         win_rate = to_1d_array(self.win_rate(group_by=group_by))
-        avg_win = to_1d_array(self.winning.pnl.mean(group_by=group_by))
-        avg_loss = to_1d_array(self.losing.pnl.mean(group_by=group_by))
+        avg_win = to_1d_array(self.winning.pnl.mean(group_by=group_by)).copy()
+        avg_loss = to_1d_array(self.losing.pnl.mean(group_by=group_by)).copy()
 
         # Otherwise columns with only wins or losses will become NaNs
         has_values = to_1d_array(self.count(group_by=group_by)) > 0
@@ -910,8 +913,17 @@ class Trades(Ranges):
             profit_mask = pnl > 0
             loss_mask = pnl < 0
 
-            marker_size = min_rel_rescale(np.abs(returns), marker_size_range)
-            opacity = max_rel_rescale(np.abs(returns), opacity_range)
+            # Exclude NaN and infinity so they cannot contaminate scaling for every trade marker.
+            abs_returns = np.abs(returns)
+            finite_mask = np.isfinite(abs_returns)
+
+            # Start unknown returns at the lower bounds, which are valid Plotly marker values.
+            marker_size = np.full(abs_returns.shape, marker_size_range[0], dtype=float)
+            opacity = np.full(abs_returns.shape, opacity_range[0], dtype=float)
+            if np.any(finite_mask):
+                # Preserve the existing relative scale for finite trades only.
+                marker_size[finite_mask] = min_rel_rescale(abs_returns[finite_mask], marker_size_range)
+                opacity[finite_mask] = max_rel_rescale(abs_returns[finite_mask], opacity_range)
 
             open_mask = status == TradeStatus.Open
             closed_profit_mask = (~open_mask) & profit_mask
@@ -1373,9 +1385,7 @@ entry_trades_field_config = Config(
 )
 """_"""
 
-__pdoc__[
-    "entry_trades_field_config"
-] = f"""Field config for `EntryTrades`.
+__pdoc__["entry_trades_field_config"] = f"""Field config for `EntryTrades`.
 
 ```json
 {entry_trades_field_config.to_doc()}
@@ -1412,9 +1422,7 @@ class EntryTrades(Trades):
 exit_trades_field_config = Config(dict(settings={"id": dict(title="Exit Trade Id")}), readonly=True, as_attrs=False)
 """_"""
 
-__pdoc__[
-    "exit_trades_field_config"
-] = f"""Field config for `ExitTrades`.
+__pdoc__["exit_trades_field_config"] = f"""Field config for `ExitTrades`.
 
 ```json
 {exit_trades_field_config.to_doc()}
@@ -1455,9 +1463,7 @@ positions_field_config = Config(
 )
 """_"""
 
-__pdoc__[
-    "positions_field_config"
-] = f"""Field config for `Positions`.
+__pdoc__["positions_field_config"] = f"""Field config for `Positions`.
 
 ```json
 {positions_field_config.to_doc()}

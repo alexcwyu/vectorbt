@@ -5,7 +5,7 @@ use ndarray::Array2;
 use numpy::{PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use pyo3::types::{IntoPyDict, PyTuple};
+use pyo3::types::IntoPyDict;
 
 use crate::generic::array1_as_slice_cow;
 
@@ -53,10 +53,10 @@ pub fn col_range_rs<'py>(
 ) -> PyResult<Bound<'py, PyArray2<i64>>> {
     let col_arr_cow = array1_as_slice_cow(&col_arr);
     let result = py
-        .allow_threads(|| col_range(col_arr_cow.as_ref(), n_cols))
+        .detach(|| col_range(col_arr_cow.as_ref(), n_cols))
         .map_err(PyValueError::new_err)?;
     let arr = Array2::from_shape_vec((n_cols, 2), result).unwrap();
-    Ok(PyArray2::from_owned_array_bound(py, arr))
+    Ok(PyArray2::from_owned_array(py, arr))
 }
 
 fn col_range_select(col_range: &[i64], new_cols: &[i64]) -> (Vec<i64>, Vec<i64>) {
@@ -108,11 +108,8 @@ pub fn col_range_select_rs<'py>(
         }
     };
     let new_cols_cow = array1_as_slice_cow(&new_cols);
-    let (indices, col_arr) = py.allow_threads(|| col_range_select(cr_slice, new_cols_cow.as_ref()));
-    Ok((
-        PyArray1::from_vec_bound(py, indices),
-        PyArray1::from_vec_bound(py, col_arr),
-    ))
+    let (indices, col_arr) = py.detach(|| col_range_select(cr_slice, new_cols_cow.as_ref()));
+    Ok((PyArray1::from_vec(py, indices), PyArray1::from_vec(py, col_arr)))
 }
 
 fn col_map(col_arr: &[i64], n_cols: usize) -> (Vec<i64>, Vec<i64>) {
@@ -244,11 +241,8 @@ pub fn col_map_rs<'py>(
     n_cols: usize,
 ) -> PyResult<(Bound<'py, PyArray1<i64>>, Bound<'py, PyArray1<i64>>)> {
     let col_arr_cow = array1_as_slice_cow(&col_arr);
-    let (col_idxs, col_lens) = py.allow_threads(|| col_map(col_arr_cow.as_ref(), n_cols));
-    Ok((
-        PyArray1::from_vec_bound(py, col_idxs),
-        PyArray1::from_vec_bound(py, col_lens),
-    ))
+    let (col_idxs, col_lens) = py.detach(|| col_map(col_arr_cow.as_ref(), n_cols));
+    Ok((PyArray1::from_vec(py, col_idxs), PyArray1::from_vec(py, col_lens)))
 }
 
 /// Helper: create an empty numpy array with the given dtype and length.
@@ -257,9 +251,9 @@ pub(crate) fn numpy_empty<'py>(
     n: usize,
     dtype: &Bound<'py, pyo3::PyAny>,
 ) -> PyResult<Bound<'py, pyo3::PyAny>> {
-    let np = py.import_bound("numpy")?;
-    let args = PyTuple::new_bound(py, &[n.into_py(py)]);
-    np.call_method("empty", (args,), Some(&[("dtype", dtype)].into_py_dict_bound(py)))
+    let np = py.import("numpy")?;
+    let kwargs = [("dtype", dtype)].into_py_dict(py)?;
+    np.call_method("empty", (n,), Some(&kwargs))
 }
 
 /// Get the data pointer and itemsize from an untyped numpy array.
@@ -304,11 +298,8 @@ pub fn col_map_select_rs<'py>(
     let col_lens_cow = array1_as_slice_cow(&col_lens);
     let new_cols_cow = array1_as_slice_cow(&new_cols);
     let (idxs, col_arr) =
-        py.allow_threads(|| col_map_select(col_idxs_cow.as_ref(), col_lens_cow.as_ref(), new_cols_cow.as_ref()));
-    Ok((
-        PyArray1::from_vec_bound(py, idxs),
-        PyArray1::from_vec_bound(py, col_arr),
-    ))
+        py.detach(|| col_map_select(col_idxs_cow.as_ref(), col_lens_cow.as_ref(), new_cols_cow.as_ref()));
+    Ok((PyArray1::from_vec(py, idxs), PyArray1::from_vec(py, col_arr)))
 }
 
 fn is_contiguous_indices(indices: &[i64]) -> bool {
@@ -424,7 +415,7 @@ fn is_col_sorted(col_arr: &[i64]) -> bool {
 #[pyfunction]
 pub fn is_col_sorted_rs<'py>(py: Python<'py>, col_arr: PyReadonlyArray1<'py, i64>) -> PyResult<bool> {
     let col_arr_cow = array1_as_slice_cow(&col_arr);
-    Ok(py.allow_threads(|| is_col_sorted(col_arr_cow.as_ref())))
+    Ok(py.detach(|| is_col_sorted(col_arr_cow.as_ref())))
 }
 
 fn is_col_idx_sorted(col_arr: &[i64], id_arr: &[i64]) -> bool {
@@ -460,7 +451,7 @@ pub fn is_col_idx_sorted_rs<'py>(
 ) -> PyResult<bool> {
     let col_arr_cow = array1_as_slice_cow(&col_arr);
     let id_arr_cow = array1_as_slice_cow(&id_arr);
-    Ok(py.allow_threads(|| is_col_idx_sorted(col_arr_cow.as_ref(), id_arr_cow.as_ref())))
+    Ok(py.detach(|| is_col_idx_sorted(col_arr_cow.as_ref(), id_arr_cow.as_ref())))
 }
 
 // ############# Expansion #############
@@ -487,7 +478,7 @@ pub fn is_mapped_expandable_rs<'py>(
     let col_arr_cow = array1_as_slice_cow(&col_arr);
     let idx_arr_cow = array1_as_slice_cow(&idx_arr);
     let (nrows, ncols) = target_shape;
-    Ok(py.allow_threads(|| is_mapped_expandable(col_arr_cow.as_ref(), idx_arr_cow.as_ref(), nrows, ncols)))
+    Ok(py.detach(|| is_mapped_expandable(col_arr_cow.as_ref(), idx_arr_cow.as_ref(), nrows, ncols)))
 }
 
 fn expand_mapped(
@@ -519,7 +510,7 @@ pub fn expand_mapped_rs<'py>(
     let col_arr_cow = array1_as_slice_cow(&col_arr);
     let idx_arr_cow = array1_as_slice_cow(&idx_arr);
     let (nrows, ncols) = target_shape;
-    let result = py.allow_threads(|| {
+    let result = py.detach(|| {
         expand_mapped(
             mapped_cow.as_ref(),
             col_arr_cow.as_ref(),
@@ -529,7 +520,7 @@ pub fn expand_mapped_rs<'py>(
             fill_value,
         )
     });
-    Ok(PyArray2::from_owned_array_bound(py, result))
+    Ok(PyArray2::from_owned_array(py, result))
 }
 
 fn stack_expand_mapped(mapped_arr: &[f64], col_idxs: &[i64], col_lens: &[i64], fill_value: f64) -> Array2<f64> {
@@ -574,7 +565,7 @@ pub fn stack_expand_mapped_rs<'py>(
     let mapped_cow = array1_as_slice_cow(&mapped_arr);
     let col_idxs_cow = array1_as_slice_cow(&col_idxs);
     let col_lens_cow = array1_as_slice_cow(&col_lens);
-    let result = py.allow_threads(|| {
+    let result = py.detach(|| {
         stack_expand_mapped(
             mapped_cow.as_ref(),
             col_idxs_cow.as_ref(),
@@ -582,7 +573,7 @@ pub fn stack_expand_mapped_rs<'py>(
             fill_value,
         )
     });
-    Ok(PyArray2::from_owned_array_bound(py, result))
+    Ok(PyArray2::from_owned_array(py, result))
 }
 
 // ############# Reducing #############
@@ -622,7 +613,7 @@ pub fn mapped_value_counts_rs<'py>(
     let codes_cow = array1_as_slice_cow(&codes);
     let col_idxs_cow = array1_as_slice_cow(&col_idxs);
     let col_lens_cow = array1_as_slice_cow(&col_lens);
-    let result = py.allow_threads(|| {
+    let result = py.detach(|| {
         mapped_value_counts(
             codes_cow.as_ref(),
             n_uniques,
@@ -630,7 +621,7 @@ pub fn mapped_value_counts_rs<'py>(
             col_lens_cow.as_ref(),
         )
     });
-    Ok(PyArray2::from_owned_array_bound(py, result))
+    Ok(PyArray2::from_owned_array(py, result))
 }
 
 // ############# Mapping #############
@@ -651,19 +642,90 @@ fn top_n_mapped_mask(mapped_arr: &[f64], col_idxs: &[i64], col_lens: &[i64], n: 
             continue;
         }
         let col_start_idx = col_start_idxs[col];
-
-        // Collect (value, global_index) for this column
-        let mut items: Vec<(f64, usize)> = Vec::with_capacity(col_len);
-        for k in 0..col_len {
-            let global_idx = col_idxs[col_start_idx + k] as usize;
-            items.push((mapped_arr[global_idx], global_idx));
+        if n >= col_len {
+            for k in 0..col_len {
+                let global_idx = col_idxs[col_start_idx + k] as usize;
+                out[global_idx] = true;
+            }
+            continue;
+        }
+        if n == 0 {
+            continue;
         }
 
-        // Sort ascending; top N = last N after sort
-        items.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
-        let start = if col_len > n { col_len - n } else { 0 };
-        for k in start..col_len {
-            out[items[k].1] = true;
+        // Collect non-NaN values for partitioning
+        let mut valid_values: Vec<f64> = Vec::with_capacity(col_len);
+        for k in 0..col_len {
+            let global_idx = col_idxs[col_start_idx + k] as usize;
+            let value = mapped_arr[global_idx];
+            if !value.is_nan() {
+                valid_values.push(value);
+            }
+        }
+
+        let n_valid = valid_values.len();
+        if n_valid == 0 {
+            let mut n_remaining = n;
+            for k in (0..col_len).rev() {
+                let global_idx = col_idxs[col_start_idx + k] as usize;
+                out[global_idx] = true;
+                n_remaining -= 1;
+                if n_remaining == 0 {
+                    break;
+                }
+            }
+            continue;
+        }
+
+        if n > n_valid {
+            for k in 0..col_len {
+                let global_idx = col_idxs[col_start_idx + k] as usize;
+                if !mapped_arr[global_idx].is_nan() {
+                    out[global_idx] = true;
+                }
+            }
+            let mut n_remaining = n - n_valid;
+            for k in (0..col_len).rev() {
+                let global_idx = col_idxs[col_start_idx + k] as usize;
+                if mapped_arr[global_idx].is_nan() {
+                    out[global_idx] = true;
+                    n_remaining -= 1;
+                    if n_remaining == 0 {
+                        break;
+                    }
+                }
+            }
+            continue;
+        }
+
+        let n_partition = n_valid - n;
+        valid_values.select_nth_unstable_by(n_partition, |a, b| a.partial_cmp(b).unwrap());
+        let pivot = valid_values[n_partition];
+
+        let mut n_greater = 0usize;
+        for k in 0..col_len {
+            let global_idx = col_idxs[col_start_idx + k] as usize;
+            let value = mapped_arr[global_idx];
+            if !value.is_nan() && value > pivot {
+                out[global_idx] = true;
+                n_greater += 1;
+            }
+        }
+
+        let mut n_remaining = n - n_greater;
+        if n_remaining == 0 {
+            continue;
+        }
+        for k in (0..col_len).rev() {
+            let global_idx = col_idxs[col_start_idx + k] as usize;
+            let value = mapped_arr[global_idx];
+            if !value.is_nan() && value == pivot {
+                out[global_idx] = true;
+                n_remaining -= 1;
+                if n_remaining == 0 {
+                    break;
+                }
+            }
         }
     }
     out
@@ -680,9 +742,8 @@ pub fn top_n_mapped_mask_rs<'py>(
     let mapped_cow = array1_as_slice_cow(&mapped_arr);
     let col_idxs_cow = array1_as_slice_cow(&col_idxs);
     let col_lens_cow = array1_as_slice_cow(&col_lens);
-    let result =
-        py.allow_threads(|| top_n_mapped_mask(mapped_cow.as_ref(), col_idxs_cow.as_ref(), col_lens_cow.as_ref(), n));
-    Ok(PyArray1::from_vec_bound(py, result))
+    let result = py.detach(|| top_n_mapped_mask(mapped_cow.as_ref(), col_idxs_cow.as_ref(), col_lens_cow.as_ref(), n));
+    Ok(PyArray1::from_vec(py, result))
 }
 
 fn bottom_n_mapped_mask(mapped_arr: &[f64], col_idxs: &[i64], col_lens: &[i64], n: usize) -> Vec<bool> {
@@ -701,19 +762,89 @@ fn bottom_n_mapped_mask(mapped_arr: &[f64], col_idxs: &[i64], col_lens: &[i64], 
             continue;
         }
         let col_start_idx = col_start_idxs[col];
-
-        // Collect (value, global_index) for this column
-        let mut items: Vec<(f64, usize)> = Vec::with_capacity(col_len);
-        for k in 0..col_len {
-            let global_idx = col_idxs[col_start_idx + k] as usize;
-            items.push((mapped_arr[global_idx], global_idx));
+        if n >= col_len {
+            for k in 0..col_len {
+                let global_idx = col_idxs[col_start_idx + k] as usize;
+                out[global_idx] = true;
+            }
+            continue;
+        }
+        if n == 0 {
+            continue;
         }
 
-        // Sort ascending; bottom N = first N after sort
-        items.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
-        let take = if col_len < n { col_len } else { n };
-        for k in 0..take {
-            out[items[k].1] = true;
+        // Collect non-NaN values for partitioning
+        let mut valid_values: Vec<f64> = Vec::with_capacity(col_len);
+        for k in 0..col_len {
+            let global_idx = col_idxs[col_start_idx + k] as usize;
+            let value = mapped_arr[global_idx];
+            if !value.is_nan() {
+                valid_values.push(value);
+            }
+        }
+
+        let n_valid = valid_values.len();
+        if n_valid == 0 {
+            let mut n_remaining = n;
+            for k in 0..col_len {
+                let global_idx = col_idxs[col_start_idx + k] as usize;
+                out[global_idx] = true;
+                n_remaining -= 1;
+                if n_remaining == 0 {
+                    break;
+                }
+            }
+            continue;
+        }
+
+        if n > n_valid {
+            for k in 0..col_len {
+                let global_idx = col_idxs[col_start_idx + k] as usize;
+                if !mapped_arr[global_idx].is_nan() {
+                    out[global_idx] = true;
+                }
+            }
+            let mut n_remaining = n - n_valid;
+            for k in 0..col_len {
+                let global_idx = col_idxs[col_start_idx + k] as usize;
+                if mapped_arr[global_idx].is_nan() {
+                    out[global_idx] = true;
+                    n_remaining -= 1;
+                    if n_remaining == 0 {
+                        break;
+                    }
+                }
+            }
+            continue;
+        }
+
+        valid_values.select_nth_unstable_by(n - 1, |a, b| a.partial_cmp(b).unwrap());
+        let pivot = valid_values[n - 1];
+
+        let mut n_less = 0usize;
+        for k in 0..col_len {
+            let global_idx = col_idxs[col_start_idx + k] as usize;
+            let value = mapped_arr[global_idx];
+            if !value.is_nan() && value < pivot {
+                out[global_idx] = true;
+                n_less += 1;
+            }
+        }
+
+        let mut n_remaining = n - n_less;
+        if n_remaining == 0 {
+            continue;
+        }
+        for k in 0..col_len {
+            let global_idx = col_idxs[col_start_idx + k] as usize;
+            let value = mapped_arr[global_idx];
+            if !value.is_nan() && value == pivot {
+                out[global_idx] = true;
+                n_remaining -= 1;
+                if n_remaining == 0 {
+                    break;
+                }
+            }
         }
     }
     out
@@ -731,8 +862,8 @@ pub fn bottom_n_mapped_mask_rs<'py>(
     let col_idxs_cow = array1_as_slice_cow(&col_idxs);
     let col_lens_cow = array1_as_slice_cow(&col_lens);
     let result =
-        py.allow_threads(|| bottom_n_mapped_mask(mapped_cow.as_ref(), col_idxs_cow.as_ref(), col_lens_cow.as_ref(), n));
-    Ok(PyArray1::from_vec_bound(py, result))
+        py.detach(|| bottom_n_mapped_mask(mapped_cow.as_ref(), col_idxs_cow.as_ref(), col_lens_cow.as_ref(), n));
+    Ok(PyArray1::from_vec(py, result))
 }
 
 // ############# Registration #############

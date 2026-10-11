@@ -4,9 +4,8 @@
 use crate::generic::{apply_2d_by_col, array1_as_slice_cow, nanstd_1d, reduce_2d_by_col, validate_window};
 use ndarray::{Array2, ArrayView2};
 use numpy::{PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
-use pyo3::exceptions::{PyValueError, PyZeroDivisionError};
+use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use std::cmp::Ordering;
 
 fn validate_same_shape_2d(a: ArrayView2<'_, f64>, b: ArrayView2<'_, f64>, name: &str) -> PyResult<()> {
     if a.dim() != b.dim() {
@@ -383,6 +382,9 @@ pub(crate) fn cum_returns_final_2d(returns: ArrayView2<'_, f64>, start_value: f6
 }
 
 pub(crate) fn annualized_return_1d(returns: &[f64], ann_factor: f64) -> f64 {
+    if returns.is_empty() {
+        return f64::NAN;
+    }
     let end_value = cum_returns_final_1d(returns, 1.0);
     end_value.powf(ann_factor / returns.len() as f64) - 1.0
 }
@@ -407,6 +409,9 @@ pub(crate) fn annualized_return_2d(returns: ArrayView2<'_, f64>, ann_factor: f64
 }
 
 fn annualized_return_from_product(product: f64, len: usize, ann_factor: f64) -> f64 {
+    if len == 0 {
+        return f64::NAN;
+    }
     product.powf(ann_factor / len as f64) - 1.0
 }
 
@@ -756,17 +761,12 @@ pub(crate) fn value_at_risk_1d(returns: &[f64], cutoff: f64) -> f64 {
 }
 
 pub(crate) fn cond_value_at_risk_1d(returns: &[f64], cutoff: f64) -> f64 {
-    if returns.is_empty() {
+    let mut vals: Vec<f64> = returns.iter().copied().filter(|value| !value.is_nan()).collect();
+    if vals.is_empty() {
         return f64::NAN;
     }
-    let mut vals = returns.to_vec();
     let cutoff_index = ((vals.len() - 1) as f64 * cutoff) as usize;
-    vals.select_nth_unstable_by(cutoff_index, |left, right| match (left.is_nan(), right.is_nan()) {
-        (true, true) => Ordering::Equal,
-        (true, false) => Ordering::Greater,
-        (false, true) => Ordering::Less,
-        (false, false) => left.partial_cmp(right).unwrap(),
-    });
+    vals.select_nth_unstable_by(cutoff_index, |left, right| left.partial_cmp(right).unwrap());
     mean_strict(&vals[..cutoff_index + 1])
 }
 
@@ -938,8 +938,8 @@ pub fn returns_1d_rs<'py>(
     init_value: f64,
 ) -> PyResult<Bound<'py, PyArray1<f64>>> {
     let value_cow = array1_as_slice_cow(&value);
-    let result = py.allow_threads(|| returns_1d(value_cow.as_ref(), init_value));
-    Ok(PyArray1::from_vec_bound(py, result))
+    let result = py.detach(|| returns_1d(value_cow.as_ref(), init_value));
+    Ok(PyArray1::from_vec(py, result))
 }
 
 #[pyfunction]
@@ -955,8 +955,8 @@ pub fn returns_rs<'py>(
             "init_value must match the number of columns in value",
         ));
     }
-    let result = py.allow_threads(|| returns_2d(value_arr, init_value_cow.as_ref()));
-    Ok(PyArray2::from_owned_array_bound(py, result))
+    let result = py.detach(|| returns_2d(value_arr, init_value_cow.as_ref()));
+    Ok(PyArray2::from_owned_array(py, result))
 }
 
 #[pyfunction]
@@ -966,8 +966,8 @@ pub fn cum_returns_1d_rs<'py>(
     start_value: f64,
 ) -> PyResult<Bound<'py, PyArray1<f64>>> {
     let returns_cow = array1_as_slice_cow(&returns);
-    let result = py.allow_threads(|| cum_returns_1d(returns_cow.as_ref(), start_value));
-    Ok(PyArray1::from_vec_bound(py, result))
+    let result = py.detach(|| cum_returns_1d(returns_cow.as_ref(), start_value));
+    Ok(PyArray1::from_vec(py, result))
 }
 
 #[pyfunction]
@@ -977,8 +977,8 @@ pub fn cum_returns_rs<'py>(
     start_value: f64,
 ) -> PyResult<Bound<'py, PyArray2<f64>>> {
     let returns_arr = returns.as_array();
-    let result = py.allow_threads(|| cum_returns_2d(returns_arr, start_value));
-    Ok(PyArray2::from_owned_array_bound(py, result))
+    let result = py.detach(|| cum_returns_2d(returns_arr, start_value));
+    Ok(PyArray2::from_owned_array(py, result))
 }
 
 #[pyfunction]
@@ -996,8 +996,8 @@ pub fn cum_returns_final_rs<'py>(
     start_value: f64,
 ) -> PyResult<Bound<'py, PyArray1<f64>>> {
     let returns_arr = returns.as_array();
-    let result = py.allow_threads(|| cum_returns_final_2d(returns_arr, start_value));
-    Ok(PyArray1::from_vec_bound(py, result))
+    let result = py.detach(|| cum_returns_final_2d(returns_arr, start_value));
+    Ok(PyArray1::from_vec(py, result))
 }
 
 #[pyfunction]
@@ -1012,10 +1012,9 @@ pub fn rolling_cum_returns_final_rs<'py>(
     let minp = minp.unwrap_or(window);
     validate_window(minp, window, "window")?;
     let returns_arr = returns.as_array();
-    let result = py.allow_threads(|| {
-        rolling_apply_2d_by_col(returns_arr, window, minp, |col| cum_returns_final_1d(col, start_value))
-    });
-    Ok(PyArray2::from_owned_array_bound(py, result))
+    let result =
+        py.detach(|| rolling_apply_2d_by_col(returns_arr, window, minp, |col| cum_returns_final_1d(col, start_value)));
+    Ok(PyArray2::from_owned_array(py, result))
 }
 
 #[pyfunction]
@@ -1025,11 +1024,8 @@ pub fn annualized_return_rs<'py>(
     ann_factor: f64,
 ) -> PyResult<Bound<'py, PyArray1<f64>>> {
     let returns_arr = returns.as_array();
-    if returns_arr.dim().0 == 0 {
-        return Err(PyZeroDivisionError::new_err("division by zero"));
-    }
-    let result = py.allow_threads(|| annualized_return_2d(returns_arr, ann_factor));
-    Ok(PyArray1::from_vec_bound(py, result))
+    let result = py.detach(|| annualized_return_2d(returns_arr, ann_factor));
+    Ok(PyArray1::from_vec(py, result))
 }
 
 #[pyfunction]
@@ -1044,10 +1040,9 @@ pub fn rolling_annualized_return_rs<'py>(
     let minp = minp.unwrap_or(window);
     validate_window(minp, window, "window")?;
     let returns_arr = returns.as_array();
-    let result = py.allow_threads(|| {
-        rolling_apply_2d_by_col(returns_arr, window, minp, |col| annualized_return_1d(col, ann_factor))
-    });
-    Ok(PyArray2::from_owned_array_bound(py, result))
+    let result =
+        py.detach(|| rolling_apply_2d_by_col(returns_arr, window, minp, |col| annualized_return_1d(col, ann_factor)));
+    Ok(PyArray2::from_owned_array(py, result))
 }
 
 #[pyfunction]
@@ -1060,8 +1055,8 @@ pub fn annualized_volatility_rs<'py>(
     ddof: usize,
 ) -> PyResult<Bound<'py, PyArray1<f64>>> {
     let returns_arr = returns.as_array();
-    let result = py.allow_threads(|| annualized_volatility_2d(returns_arr, ann_factor, levy_alpha, ddof));
-    Ok(PyArray1::from_vec_bound(py, result))
+    let result = py.detach(|| annualized_volatility_2d(returns_arr, ann_factor, levy_alpha, ddof));
+    Ok(PyArray1::from_vec(py, result))
 }
 
 #[pyfunction]
@@ -1078,19 +1073,19 @@ pub fn rolling_annualized_volatility_rs<'py>(
     let minp = minp.unwrap_or(window);
     validate_window(minp, window, "window")?;
     let returns_arr = returns.as_array();
-    let result = py.allow_threads(|| {
+    let result = py.detach(|| {
         rolling_apply_2d_by_col(returns_arr, window, minp, |col| {
             annualized_volatility_1d(col, ann_factor, levy_alpha, ddof)
         })
     });
-    Ok(PyArray2::from_owned_array_bound(py, result))
+    Ok(PyArray2::from_owned_array(py, result))
 }
 
 #[pyfunction]
 pub fn drawdown_rs<'py>(py: Python<'py>, returns: PyReadonlyArray2<'py, f64>) -> PyResult<Bound<'py, PyArray2<f64>>> {
     let returns_arr = returns.as_array();
-    let result = py.allow_threads(|| apply_2d_by_col(returns_arr, drawdown_1d));
-    Ok(PyArray2::from_owned_array_bound(py, result))
+    let result = py.detach(|| apply_2d_by_col(returns_arr, drawdown_1d));
+    Ok(PyArray2::from_owned_array(py, result))
 }
 
 #[pyfunction]
@@ -1104,8 +1099,8 @@ pub fn max_drawdown_rs<'py>(
             "zero-size array to reduction operation minimum which has no identity",
         ));
     }
-    let result = py.allow_threads(|| reduce_2d_by_col(returns_arr, max_drawdown_1d));
-    Ok(PyArray1::from_vec_bound(py, result))
+    let result = py.detach(|| reduce_2d_by_col(returns_arr, max_drawdown_1d));
+    Ok(PyArray1::from_vec(py, result))
 }
 
 #[pyfunction]
@@ -1119,8 +1114,8 @@ pub fn rolling_max_drawdown_rs<'py>(
     let minp = minp.unwrap_or(window);
     validate_window(minp, window, "window")?;
     let returns_arr = returns.as_array();
-    let result = py.allow_threads(|| rolling_apply_2d_by_col(returns_arr, window, minp, max_drawdown_1d));
-    Ok(PyArray2::from_owned_array_bound(py, result))
+    let result = py.detach(|| rolling_apply_2d_by_col(returns_arr, window, minp, max_drawdown_1d));
+    Ok(PyArray2::from_owned_array(py, result))
 }
 
 #[pyfunction]
@@ -1135,8 +1130,8 @@ pub fn calmar_ratio_rs<'py>(
             "zero-size array to reduction operation minimum which has no identity",
         ));
     }
-    let result = py.allow_threads(|| reduce_2d_by_col(returns_arr, |col| calmar_ratio_1d(col, ann_factor)));
-    Ok(PyArray1::from_vec_bound(py, result))
+    let result = py.detach(|| reduce_2d_by_col(returns_arr, |col| calmar_ratio_1d(col, ann_factor)));
+    Ok(PyArray1::from_vec(py, result))
 }
 
 #[pyfunction]
@@ -1152,8 +1147,8 @@ pub fn rolling_calmar_ratio_rs<'py>(
     validate_window(minp, window, "window")?;
     let returns_arr = returns.as_array();
     let result =
-        py.allow_threads(|| rolling_apply_2d_by_col(returns_arr, window, minp, |col| calmar_ratio_1d(col, ann_factor)));
-    Ok(PyArray2::from_owned_array_bound(py, result))
+        py.detach(|| rolling_apply_2d_by_col(returns_arr, window, minp, |col| calmar_ratio_1d(col, ann_factor)));
+    Ok(PyArray2::from_owned_array(py, result))
 }
 
 #[pyfunction]
@@ -1166,12 +1161,12 @@ pub fn omega_ratio_rs<'py>(
     required_return: f64,
 ) -> PyResult<Bound<'py, PyArray1<f64>>> {
     let returns_arr = returns.as_array();
-    let result = py.allow_threads(|| {
+    let result = py.detach(|| {
         reduce_2d_by_col(returns_arr, |col| {
             omega_ratio_1d(col, ann_factor, risk_free, required_return)
         })
     });
-    Ok(PyArray1::from_vec_bound(py, result))
+    Ok(PyArray1::from_vec(py, result))
 }
 
 #[pyfunction]
@@ -1188,12 +1183,12 @@ pub fn rolling_omega_ratio_rs<'py>(
     let minp = minp.unwrap_or(window);
     validate_window(minp, window, "window")?;
     let returns_arr = returns.as_array();
-    let result = py.allow_threads(|| {
+    let result = py.detach(|| {
         rolling_apply_2d_by_col(returns_arr, window, minp, |col| {
             omega_ratio_1d(col, ann_factor, risk_free, required_return)
         })
     });
-    Ok(PyArray2::from_owned_array_bound(py, result))
+    Ok(PyArray2::from_owned_array(py, result))
 }
 
 #[pyfunction]
@@ -1206,8 +1201,8 @@ pub fn sharpe_ratio_rs<'py>(
     ddof: usize,
 ) -> PyResult<Bound<'py, PyArray1<f64>>> {
     let returns_arr = returns.as_array();
-    let result = py.allow_threads(|| sharpe_ratio_2d(returns_arr, ann_factor, risk_free, ddof));
-    Ok(PyArray1::from_vec_bound(py, result))
+    let result = py.detach(|| sharpe_ratio_2d(returns_arr, ann_factor, risk_free, ddof));
+    Ok(PyArray1::from_vec(py, result))
 }
 
 #[pyfunction]
@@ -1224,12 +1219,12 @@ pub fn rolling_sharpe_ratio_rs<'py>(
     let minp = minp.unwrap_or(window);
     validate_window(minp, window, "window")?;
     let returns_arr = returns.as_array();
-    let result = py.allow_threads(|| {
+    let result = py.detach(|| {
         rolling_apply_2d_by_col(returns_arr, window, minp, |col| {
             sharpe_ratio_1d(col, ann_factor, risk_free, ddof)
         })
     });
-    Ok(PyArray2::from_owned_array_bound(py, result))
+    Ok(PyArray2::from_owned_array(py, result))
 }
 
 #[pyfunction]
@@ -1241,9 +1236,8 @@ pub fn downside_risk_rs<'py>(
     required_return: f64,
 ) -> PyResult<Bound<'py, PyArray1<f64>>> {
     let returns_arr = returns.as_array();
-    let result =
-        py.allow_threads(|| reduce_2d_by_col(returns_arr, |col| downside_risk_1d(col, ann_factor, required_return)));
-    Ok(PyArray1::from_vec_bound(py, result))
+    let result = py.detach(|| reduce_2d_by_col(returns_arr, |col| downside_risk_1d(col, ann_factor, required_return)));
+    Ok(PyArray1::from_vec(py, result))
 }
 
 #[pyfunction]
@@ -1259,12 +1253,12 @@ pub fn rolling_downside_risk_rs<'py>(
     let minp = minp.unwrap_or(window);
     validate_window(minp, window, "window")?;
     let returns_arr = returns.as_array();
-    let result = py.allow_threads(|| {
+    let result = py.detach(|| {
         rolling_apply_2d_by_col(returns_arr, window, minp, |col| {
             downside_risk_1d(col, ann_factor, required_return)
         })
     });
-    Ok(PyArray2::from_owned_array_bound(py, result))
+    Ok(PyArray2::from_owned_array(py, result))
 }
 
 #[pyfunction]
@@ -1276,9 +1270,8 @@ pub fn sortino_ratio_rs<'py>(
     required_return: f64,
 ) -> PyResult<Bound<'py, PyArray1<f64>>> {
     let returns_arr = returns.as_array();
-    let result =
-        py.allow_threads(|| reduce_2d_by_col(returns_arr, |col| sortino_ratio_1d(col, ann_factor, required_return)));
-    Ok(PyArray1::from_vec_bound(py, result))
+    let result = py.detach(|| reduce_2d_by_col(returns_arr, |col| sortino_ratio_1d(col, ann_factor, required_return)));
+    Ok(PyArray1::from_vec(py, result))
 }
 
 #[pyfunction]
@@ -1294,12 +1287,12 @@ pub fn rolling_sortino_ratio_rs<'py>(
     let minp = minp.unwrap_or(window);
     validate_window(minp, window, "window")?;
     let returns_arr = returns.as_array();
-    let result = py.allow_threads(|| {
+    let result = py.detach(|| {
         rolling_apply_2d_by_col(returns_arr, window, minp, |col| {
             sortino_ratio_1d(col, ann_factor, required_return)
         })
     });
-    Ok(PyArray2::from_owned_array_bound(py, result))
+    Ok(PyArray2::from_owned_array(py, result))
 }
 
 #[pyfunction]
@@ -1313,8 +1306,8 @@ pub fn information_ratio_rs<'py>(
     let returns_arr = returns.as_array();
     let benchmark_rets_arr = benchmark_rets.as_array();
     validate_same_shape_2d(returns_arr, benchmark_rets_arr, "benchmark_rets")?;
-    let result = py.allow_threads(|| information_ratio_2d(returns_arr, benchmark_rets_arr, ddof));
-    Ok(PyArray1::from_vec_bound(py, result))
+    let result = py.detach(|| information_ratio_2d(returns_arr, benchmark_rets_arr, ddof));
+    Ok(PyArray1::from_vec(py, result))
 }
 
 #[pyfunction]
@@ -1332,12 +1325,12 @@ pub fn rolling_information_ratio_rs<'py>(
     let returns_arr = returns.as_array();
     let benchmark_rets_arr = benchmark_rets.as_array();
     validate_same_shape_2d(returns_arr, benchmark_rets_arr, "benchmark_rets")?;
-    let result = py.allow_threads(|| {
+    let result = py.detach(|| {
         rolling_apply_pair_2d_by_col(returns_arr, benchmark_rets_arr, window, minp, |col, benchmark_col| {
             information_ratio_1d(col, benchmark_col, ddof)
         })
     });
-    Ok(PyArray2::from_owned_array_bound(py, result))
+    Ok(PyArray2::from_owned_array(py, result))
 }
 
 #[pyfunction]
@@ -1349,8 +1342,8 @@ pub fn beta_rs<'py>(
     let returns_arr = returns.as_array();
     let benchmark_rets_arr = benchmark_rets.as_array();
     validate_same_shape_2d(returns_arr, benchmark_rets_arr, "benchmark_rets")?;
-    let result = py.allow_threads(|| reduce_pair_2d_by_col(returns_arr, benchmark_rets_arr, beta_1d));
-    Ok(PyArray1::from_vec_bound(py, result))
+    let result = py.detach(|| reduce_pair_2d_by_col(returns_arr, benchmark_rets_arr, beta_1d));
+    Ok(PyArray1::from_vec(py, result))
 }
 
 #[pyfunction]
@@ -1367,9 +1360,8 @@ pub fn rolling_beta_rs<'py>(
     let returns_arr = returns.as_array();
     let benchmark_rets_arr = benchmark_rets.as_array();
     validate_same_shape_2d(returns_arr, benchmark_rets_arr, "benchmark_rets")?;
-    let result =
-        py.allow_threads(|| rolling_apply_pair_2d_by_col(returns_arr, benchmark_rets_arr, window, minp, beta_1d));
-    Ok(PyArray2::from_owned_array_bound(py, result))
+    let result = py.detach(|| rolling_apply_pair_2d_by_col(returns_arr, benchmark_rets_arr, window, minp, beta_1d));
+    Ok(PyArray2::from_owned_array(py, result))
 }
 
 #[pyfunction]
@@ -1384,12 +1376,12 @@ pub fn alpha_rs<'py>(
     let returns_arr = returns.as_array();
     let benchmark_rets_arr = benchmark_rets.as_array();
     validate_same_shape_2d(returns_arr, benchmark_rets_arr, "benchmark_rets")?;
-    let result = py.allow_threads(|| {
+    let result = py.detach(|| {
         reduce_pair_2d_by_col(returns_arr, benchmark_rets_arr, |col, benchmark_col| {
             alpha_1d(col, benchmark_col, ann_factor, risk_free)
         })
     });
-    Ok(PyArray1::from_vec_bound(py, result))
+    Ok(PyArray1::from_vec(py, result))
 }
 
 #[pyfunction]
@@ -1408,19 +1400,19 @@ pub fn rolling_alpha_rs<'py>(
     let returns_arr = returns.as_array();
     let benchmark_rets_arr = benchmark_rets.as_array();
     validate_same_shape_2d(returns_arr, benchmark_rets_arr, "benchmark_rets")?;
-    let result = py.allow_threads(|| {
+    let result = py.detach(|| {
         rolling_apply_pair_2d_by_col(returns_arr, benchmark_rets_arr, window, minp, |col, benchmark_col| {
             alpha_1d(col, benchmark_col, ann_factor, risk_free)
         })
     });
-    Ok(PyArray2::from_owned_array_bound(py, result))
+    Ok(PyArray2::from_owned_array(py, result))
 }
 
 #[pyfunction]
 pub fn tail_ratio_rs<'py>(py: Python<'py>, returns: PyReadonlyArray2<'py, f64>) -> PyResult<Bound<'py, PyArray1<f64>>> {
     let returns_arr = returns.as_array();
-    let result = py.allow_threads(|| reduce_2d_by_col(returns_arr, tail_ratio_1d));
-    Ok(PyArray1::from_vec_bound(py, result))
+    let result = py.detach(|| reduce_2d_by_col(returns_arr, tail_ratio_1d));
+    Ok(PyArray1::from_vec(py, result))
 }
 
 #[pyfunction]
@@ -1434,8 +1426,8 @@ pub fn rolling_tail_ratio_rs<'py>(
     let minp = minp.unwrap_or(window);
     validate_window(minp, window, "window")?;
     let returns_arr = returns.as_array();
-    let result = py.allow_threads(|| rolling_apply_2d_by_col(returns_arr, window, minp, tail_ratio_1d));
-    Ok(PyArray2::from_owned_array_bound(py, result))
+    let result = py.detach(|| rolling_apply_2d_by_col(returns_arr, window, minp, tail_ratio_1d));
+    Ok(PyArray2::from_owned_array(py, result))
 }
 
 #[pyfunction]
@@ -1446,8 +1438,8 @@ pub fn value_at_risk_rs<'py>(
     cutoff: f64,
 ) -> PyResult<Bound<'py, PyArray1<f64>>> {
     let returns_arr = returns.as_array();
-    let result = py.allow_threads(|| reduce_2d_by_col(returns_arr, |col| value_at_risk_1d(col, cutoff)));
-    Ok(PyArray1::from_vec_bound(py, result))
+    let result = py.detach(|| reduce_2d_by_col(returns_arr, |col| value_at_risk_1d(col, cutoff)));
+    Ok(PyArray1::from_vec(py, result))
 }
 
 #[pyfunction]
@@ -1462,9 +1454,8 @@ pub fn rolling_value_at_risk_rs<'py>(
     let minp = minp.unwrap_or(window);
     validate_window(minp, window, "window")?;
     let returns_arr = returns.as_array();
-    let result =
-        py.allow_threads(|| rolling_apply_2d_by_col(returns_arr, window, minp, |col| value_at_risk_1d(col, cutoff)));
-    Ok(PyArray2::from_owned_array_bound(py, result))
+    let result = py.detach(|| rolling_apply_2d_by_col(returns_arr, window, minp, |col| value_at_risk_1d(col, cutoff)));
+    Ok(PyArray2::from_owned_array(py, result))
 }
 
 #[pyfunction]
@@ -1475,11 +1466,8 @@ pub fn cond_value_at_risk_rs<'py>(
     cutoff: f64,
 ) -> PyResult<Bound<'py, PyArray1<f64>>> {
     let returns_arr = returns.as_array();
-    if returns_arr.dim().0 == 0 {
-        return Err(PyZeroDivisionError::new_err("division by zero"));
-    }
-    let result = py.allow_threads(|| reduce_2d_by_col(returns_arr, |col| cond_value_at_risk_1d(col, cutoff)));
-    Ok(PyArray1::from_vec_bound(py, result))
+    let result = py.detach(|| reduce_2d_by_col(returns_arr, |col| cond_value_at_risk_1d(col, cutoff)));
+    Ok(PyArray1::from_vec(py, result))
 }
 
 #[pyfunction]
@@ -1494,9 +1482,9 @@ pub fn rolling_cond_value_at_risk_rs<'py>(
     let minp = minp.unwrap_or(window);
     validate_window(minp, window, "window")?;
     let returns_arr = returns.as_array();
-    let result = py
-        .allow_threads(|| rolling_apply_2d_by_col(returns_arr, window, minp, |col| cond_value_at_risk_1d(col, cutoff)));
-    Ok(PyArray2::from_owned_array_bound(py, result))
+    let result =
+        py.detach(|| rolling_apply_2d_by_col(returns_arr, window, minp, |col| cond_value_at_risk_1d(col, cutoff)));
+    Ok(PyArray2::from_owned_array(py, result))
 }
 
 #[pyfunction]
@@ -1509,8 +1497,8 @@ pub fn capture_rs<'py>(
     let returns_arr = returns.as_array();
     let benchmark_rets_arr = benchmark_rets.as_array();
     validate_same_shape_2d(returns_arr, benchmark_rets_arr, "benchmark_rets")?;
-    let result = py.allow_threads(|| capture_2d(returns_arr, benchmark_rets_arr, ann_factor));
-    Ok(PyArray1::from_vec_bound(py, result))
+    let result = py.detach(|| capture_2d(returns_arr, benchmark_rets_arr, ann_factor));
+    Ok(PyArray1::from_vec(py, result))
 }
 
 #[pyfunction]
@@ -1528,12 +1516,12 @@ pub fn rolling_capture_rs<'py>(
     let returns_arr = returns.as_array();
     let benchmark_rets_arr = benchmark_rets.as_array();
     validate_same_shape_2d(returns_arr, benchmark_rets_arr, "benchmark_rets")?;
-    let result = py.allow_threads(|| {
+    let result = py.detach(|| {
         rolling_apply_pair_2d_by_col(returns_arr, benchmark_rets_arr, window, minp, |col, benchmark_col| {
             capture_1d(col, benchmark_col, ann_factor)
         })
     });
-    Ok(PyArray2::from_owned_array_bound(py, result))
+    Ok(PyArray2::from_owned_array(py, result))
 }
 
 #[pyfunction]
@@ -1546,8 +1534,8 @@ pub fn up_capture_rs<'py>(
     let returns_arr = returns.as_array();
     let benchmark_rets_arr = benchmark_rets.as_array();
     validate_same_shape_2d(returns_arr, benchmark_rets_arr, "benchmark_rets")?;
-    let result = py.allow_threads(|| filtered_capture_2d(returns_arr, benchmark_rets_arr, ann_factor, true));
-    Ok(PyArray1::from_vec_bound(py, result))
+    let result = py.detach(|| filtered_capture_2d(returns_arr, benchmark_rets_arr, ann_factor, true));
+    Ok(PyArray1::from_vec(py, result))
 }
 
 #[pyfunction]
@@ -1565,12 +1553,12 @@ pub fn rolling_up_capture_rs<'py>(
     let returns_arr = returns.as_array();
     let benchmark_rets_arr = benchmark_rets.as_array();
     validate_same_shape_2d(returns_arr, benchmark_rets_arr, "benchmark_rets")?;
-    let result = py.allow_threads(|| {
+    let result = py.detach(|| {
         rolling_apply_pair_2d_by_col(returns_arr, benchmark_rets_arr, window, minp, |col, benchmark_col| {
             up_capture_1d(col, benchmark_col, ann_factor)
         })
     });
-    Ok(PyArray2::from_owned_array_bound(py, result))
+    Ok(PyArray2::from_owned_array(py, result))
 }
 
 #[pyfunction]
@@ -1583,8 +1571,8 @@ pub fn down_capture_rs<'py>(
     let returns_arr = returns.as_array();
     let benchmark_rets_arr = benchmark_rets.as_array();
     validate_same_shape_2d(returns_arr, benchmark_rets_arr, "benchmark_rets")?;
-    let result = py.allow_threads(|| filtered_capture_2d(returns_arr, benchmark_rets_arr, ann_factor, false));
-    Ok(PyArray1::from_vec_bound(py, result))
+    let result = py.detach(|| filtered_capture_2d(returns_arr, benchmark_rets_arr, ann_factor, false));
+    Ok(PyArray1::from_vec(py, result))
 }
 
 #[pyfunction]
@@ -1602,12 +1590,12 @@ pub fn rolling_down_capture_rs<'py>(
     let returns_arr = returns.as_array();
     let benchmark_rets_arr = benchmark_rets.as_array();
     validate_same_shape_2d(returns_arr, benchmark_rets_arr, "benchmark_rets")?;
-    let result = py.allow_threads(|| {
+    let result = py.detach(|| {
         rolling_apply_pair_2d_by_col(returns_arr, benchmark_rets_arr, window, minp, |col, benchmark_col| {
             down_capture_1d(col, benchmark_col, ann_factor)
         })
     });
-    Ok(PyArray2::from_owned_array_bound(py, result))
+    Ok(PyArray2::from_owned_array(py, result))
 }
 
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
