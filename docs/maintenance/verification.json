@@ -1,0 +1,348 @@
+{
+  "repository": "vectorbt",
+  "source_commit_before_documentation_commit": "4d450de51203606c2da25bfefb301718c70f89ea",
+  "recorded_on": "2026-10-12",
+  "records": [
+    {
+      "command": [
+        "uv",
+        "build"
+      ],
+      "exit_code": 0,
+      "cwd": "<workspace>/vectorbt",
+      "check": "build",
+      "original_log": "vectorbt-build.log",
+      "log_sha256": "0f3fcdb01dec74fa9a92ee691e8f4a7e0c6a2fef06caa6090b781859bcdcdc43",
+      "outcomes": [
+        "Successfully built dist/vectorbt-1.1.2.tar.gz",
+        "Successfully built dist/vectorbt-1.1.2-py3-none-any.whl"
+      ]
+    },
+    {
+      "command": [
+        "uv",
+        "build"
+      ],
+      "exit_code": 0,
+      "cwd": "<workspace>/vectorbt",
+      "check": "build-final",
+      "original_log": "vectorbt-build-final.log",
+      "log_sha256": "0f3fcdb01dec74fa9a92ee691e8f4a7e0c6a2fef06caa6090b781859bcdcdc43",
+      "outcomes": [
+        "Successfully built dist/vectorbt-1.1.2.tar.gz",
+        "Successfully built dist/vectorbt-1.1.2-py3-none-any.whl"
+      ]
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "rust/Cargo.toml"
+      ],
+      "exit_code": 0,
+      "cwd": "<workspace>/vectorbt",
+      "check": "cargo-tests",
+      "original_log": "vectorbt-cargo-tests.log",
+      "log_sha256": "ece973c02a2ecd806baa6355a559789efb6a9dab4b82da25cd0a88be7b4afb71",
+      "outcomes": [
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      ]
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "--no-sync",
+        "pytest",
+        "tests/test_data.py::TestData::test_download",
+        "-x"
+      ],
+      "exit_code": 0,
+      "cwd": "<workspace>/vectorbt",
+      "check": "data-warning-contracts",
+      "original_log": "vectorbt-data-warning-contracts.log",
+      "log_sha256": "6b128fd13db8ee03c1cf40a48035e6846ad1e518a539256bffb517c38e7b96b3",
+      "outcomes": [
+        "1 passed in 0.38s"
+      ]
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "--no-sync",
+        "pytest",
+        "tests/test_data.py::TestData::test_download",
+        "-x"
+      ],
+      "exit_code": 1,
+      "cwd": "<workspace>/vectorbt",
+      "check": "data-warning-current",
+      "original_log": "vectorbt-data-warning-current.log",
+      "log_sha256": "e423c1c97f1154aa04bea803d1024c11abe3123638157b6b742d20b9b99876e2",
+      "outcomes": []
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "--no-sync",
+        "pytest",
+        "tests/test_engine.py::TestIndicatorRustParity",
+        "-x"
+      ],
+      "exit_code": 0,
+      "cwd": "<workspace>/vectorbt",
+      "check": "engine-parity-current",
+      "original_log": "vectorbt-engine-parity-current.log",
+      "log_sha256": "222f8d7fac60f0ba1ead7a6c2361ceceac187a2d8ee4cf41fb34af01be8aef97",
+      "outcomes": [
+        "2 passed in 51.10s"
+      ]
+    },
+    {
+      "command": [
+        "uv",
+        "sync",
+        "--all-groups",
+        "--all-extras",
+        "--python",
+        "3.14.8"
+      ],
+      "exit_code": 0,
+      "cwd": "<workspace>/vectorbt",
+      "check": "python314-sync",
+      "original_log": "vectorbt-python314-sync.log",
+      "log_sha256": "f7e1c5d5ddc7a42bfb4a37cd9ed3406f34a315cf836a30cdfde51bbbb8514ee5",
+      "outcomes": []
+    },
+    {
+      "command": [
+        "uv",
+        "lock",
+        "--upgrade",
+        "--python",
+        "3.15"
+      ],
+      "exit_code": 0,
+      "cwd": "<workspace>/vectorbt",
+      "check": "python315-lock",
+      "original_log": "vectorbt-python315-lock.log",
+      "log_sha256": "8a46aa58ee591e4e90592b142d99cab708fdb87edb9780482713b2c450a0b2ab",
+      "outcomes": []
+    },
+    {
+      "command": [
+        "uv",
+        "sync",
+        "--python",
+        "3.15",
+        "--all-groups",
+        "--all-extras"
+      ],
+      "exit_code": 2,
+      "cwd": "<workspace>/vectorbt",
+      "check": "python315-sync",
+      "original_log": "vectorbt-python315-sync.log",
+      "log_sha256": "666d8eb328bf33f595c7b45d31f26e0a7f6bb0ecfa94e954fd51b4e4225b757e",
+      "outcomes": []
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "--no-sync",
+        "pytest"
+      ],
+      "exit_code": 4,
+      "cwd": "<workspace>/vectorbt",
+      "check": "tests",
+      "original_log": "vectorbt-tests.log",
+      "log_sha256": "ec077d4637b7e300c1b929eac0ca204bf0d2778bc3a9ddf39d10279d7c151341",
+      "outcomes": []
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "--no-sync",
+        "pytest"
+      ],
+      "exit_code": 0,
+      "cwd": "<workspace>/vectorbt",
+      "check": "tests-all-final",
+      "original_log": "vectorbt-tests-all-final.log",
+      "log_sha256": "41f78add33035c3a527b738624b901ec7fc3a40818fe300a94eac86b90403f81",
+      "outcomes": [
+        "1113 passed in 227.09s (0:03:47)"
+      ]
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "--no-sync",
+        "pytest"
+      ],
+      "exit_code": 1,
+      "cwd": "<workspace>/vectorbt",
+      "check": "tests-asserted-warnings",
+      "original_log": "vectorbt-tests-asserted-warnings.log",
+      "log_sha256": "4cf3b0c148fff59bd6ca0ea2763e3d60b2b99c84eaf3a34ae3f551e62e1be3d4",
+      "outcomes": [
+        "10 failed, 1103 passed in 728.26s (0:12:08)"
+      ]
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "--no-sync",
+        "pytest"
+      ],
+      "exit_code": 1,
+      "cwd": "<workspace>/vectorbt",
+      "check": "tests-current-contracts-final",
+      "original_log": "vectorbt-tests-current-contracts-final.log",
+      "log_sha256": "5a3e3ffae3e159f9cbf0839472e363bc897065103feab4169e8c05db81b1df69",
+      "outcomes": [
+        "2 failed, 1111 passed in 259.96s (0:04:19)"
+      ]
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "--no-sync",
+        "pytest"
+      ],
+      "exit_code": 2,
+      "cwd": "<workspace>/vectorbt",
+      "check": "tests-current-warning-contracts",
+      "original_log": "vectorbt-tests-current-warning-contracts.log",
+      "log_sha256": "b3b7aa88065482b46c60124e61331804a3c74ceb25c1655a236afafdcddc27c0",
+      "outcomes": []
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "--no-sync",
+        "pytest"
+      ],
+      "exit_code": 1,
+      "cwd": "<workspace>/vectorbt",
+      "check": "tests-explicit-time-units",
+      "original_log": "vectorbt-tests-explicit-time-units.log",
+      "log_sha256": "c0707eaa1dbab31e399bf1ae0db81799b25506b38e3c0681298a45fdb35540f7",
+      "outcomes": [
+        "37 failed, 1076 passed in 687.44s (0:11:27)"
+      ]
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "--no-sync",
+        "pytest"
+      ],
+      "exit_code": 2,
+      "cwd": "<workspace>/vectorbt",
+      "check": "tests-lazy-provider-import",
+      "original_log": "vectorbt-tests-lazy-provider-import.log",
+      "log_sha256": "64fcf25c9f34884ea1f6083c63ba8e1550ca151fd8ae3582fec6d50fac56b580",
+      "outcomes": []
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "--no-sync",
+        "pytest"
+      ],
+      "exit_code": 1,
+      "cwd": "<workspace>/vectorbt",
+      "check": "tests-warning-assertions",
+      "original_log": "vectorbt-tests-warning-assertions.log",
+      "log_sha256": "0d33901d5d928ab12fb5d18a1da1712eacf5266458d0156707667c28a415f2de",
+      "outcomes": [
+        "10 failed, 1103 passed in 718.02s (0:11:58)"
+      ]
+    }
+  ],
+  "summary": {
+    "repo": "vectorbt",
+    "status": "complete",
+    "branch": "feature/ayu_develop",
+    "head": "4d450de51203606c2da25bfefb301718c70f89ea",
+    "selected_python": "3.14.8",
+    "uv_version": "0.13.0",
+    "rust_version": "1.99.0",
+    "build": {
+      "repo": "vectorbt",
+      "step": "build-final",
+      "command": [
+        "uv",
+        "build"
+      ],
+      "cwd": "<workspace>/vectorbt",
+      "started": 1791738710.5977201,
+      "log": "<workspace>/docs/maintenance-2026-10-12/vectorbt-build-final.log",
+      "exit_code": 0,
+      "elapsed_seconds": 1.2
+    },
+    "full_tests": {
+      "repo": "vectorbt",
+      "step": "tests-all-final",
+      "command": [
+        "uv",
+        "run",
+        "--no-sync",
+        "pytest"
+      ],
+      "cwd": "<workspace>/vectorbt",
+      "started": 1791738361.5937622,
+      "log": "<workspace>/docs/maintenance-2026-10-12/vectorbt-tests-all-final.log",
+      "exit_code": 0,
+      "elapsed_seconds": 236.42
+    },
+    "summary": "Full existing Python suite:1113passed, no skips/failures. The initial complete run had1076passed and37strict-warning failures; subsequent complete runs retained all assertions and cases. Explicit NumPy time units, typed Numba cache inputs, current Pandas durations, exact documented warning assertions, and the current QuantStats paired-observation R-squared result repair compatibility. The Rust extension builds during full all-extra sync; Cargo native tests and existing Python engine parity tests also pass.",
+    "documentation": [
+      "docs/ayu-develop.md",
+      "docs/ayu-develop.html",
+      "docs/development.md",
+      "docs/development.html",
+      "docs/validation.md",
+      "docs/validation.html"
+    ],
+    "source_links": 13,
+    "diagram_count": 6,
+    "sync_evidence": "<workspace>/docs/maintenance-2026-10-12/vectorbt-sync.json",
+    "feature_pushed": false,
+    "commit": "4d450de51203606c2da25bfefb301718c70f89ea",
+    "test_summary": {
+      "passed": 1113,
+      "failed": 0,
+      "skipped": 0,
+      "full_suite": true
+    },
+    "blockers": [],
+    "native_tests": {
+      "repo": "vectorbt",
+      "step": "cargo-tests",
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "rust/Cargo.toml"
+      ],
+      "cwd": "<workspace>/vectorbt",
+      "started": 1791736466.001497,
+      "log": "<workspace>/docs/maintenance-2026-10-12/vectorbt-cargo-tests.log",
+      "exit_code": 0,
+      "elapsed_seconds": 46.36
+    }
+  },
+  "note": "Full raw logs are retained in the workspace maintenance evidence, not distributed here. Hashes identify those original logs. A successful build or selected test subset does not imply a full test-suite pass. Commands containing <workspace> describe the original execution environment."
+}

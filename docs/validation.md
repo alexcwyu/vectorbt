@@ -12,23 +12,23 @@ Current recorded status: **complete**. Interpreter fallback evidence and native 
 
 | Step | Exact command | Exit | Elapsed seconds | Evidence |
 |---|---|---:|---:|---|
-| python315-sync | `uv sync --python 3.15 --all-groups --all-extras` | 2 | unrecorded | [vectorbt-python315-sync.log](../../docs/maintenance-2026-10-12/vectorbt-python315-sync.log) |
-| python315-lock | `uv lock --upgrade --python 3.15` | 0 | unrecorded | [vectorbt-python315-lock.log](../../docs/maintenance-2026-10-12/vectorbt-python315-lock.log) |
-| python314-sync | `uv sync --all-groups --all-extras --python 3.14.8` | 0 | 70.89 | [vectorbt-python314-sync.log](../../docs/maintenance-2026-10-12/vectorbt-python314-sync.log) |
-| tests | `uv run --no-sync pytest` | 4 | 17.55 | [vectorbt-tests.log](../../docs/maintenance-2026-10-12/vectorbt-tests.log) |
-| build | `uv build` | 0 | 2.82 | [vectorbt-build.log](../../docs/maintenance-2026-10-12/vectorbt-build.log) |
-| tests-lazy-provider-import | `uv run --no-sync pytest` | 2 | 24.44 | [vectorbt-tests-lazy-provider-import.log](../../docs/maintenance-2026-10-12/vectorbt-tests-lazy-provider-import.log) |
-| tests-explicit-time-units | `uv run --no-sync pytest` | 1 | 702.37 | [vectorbt-tests-explicit-time-units.log](../../docs/maintenance-2026-10-12/vectorbt-tests-explicit-time-units.log) |
-| cargo-tests | `cargo test --manifest-path rust/Cargo.toml` | 0 | 46.36 | [vectorbt-cargo-tests.log](../../docs/maintenance-2026-10-12/vectorbt-cargo-tests.log) |
-| tests-current-warning-contracts | `uv run --no-sync pytest` | 2 | 26.95 | [vectorbt-tests-current-warning-contracts.log](../../docs/maintenance-2026-10-12/vectorbt-tests-current-warning-contracts.log) |
-| tests-asserted-warnings | `uv run --no-sync pytest` | 1 | 742.47 | [vectorbt-tests-asserted-warnings.log](../../docs/maintenance-2026-10-12/vectorbt-tests-asserted-warnings.log) |
-| tests-warning-assertions | `uv run --no-sync pytest` | 1 | 732.81 | [vectorbt-tests-warning-assertions.log](../../docs/maintenance-2026-10-12/vectorbt-tests-warning-assertions.log) |
-| data-warning-current | `uv run --no-sync pytest tests/test_data.py::TestData::test_download -x` | 1 | 12.3 | [vectorbt-data-warning-current.log](../../docs/maintenance-2026-10-12/vectorbt-data-warning-current.log) |
-| engine-parity-current | `uv run --no-sync pytest tests/test_engine.py::TestIndicatorRustParity -x` | 0 | 64.0 | [vectorbt-engine-parity-current.log](../../docs/maintenance-2026-10-12/vectorbt-engine-parity-current.log) |
-| data-warning-contracts | `uv run --no-sync pytest tests/test_data.py::TestData::test_download -x` | 0 | 11.98 | [vectorbt-data-warning-contracts.log](../../docs/maintenance-2026-10-12/vectorbt-data-warning-contracts.log) |
-| tests-current-contracts-final | `uv run --no-sync pytest` | 1 | 269.18 | [vectorbt-tests-current-contracts-final.log](../../docs/maintenance-2026-10-12/vectorbt-tests-current-contracts-final.log) |
-| tests-all-final | `uv run --no-sync pytest` | 0 | 236.42 | [vectorbt-tests-all-final.log](../../docs/maintenance-2026-10-12/vectorbt-tests-all-final.log) |
-| build-final | `uv build` | 0 | 1.2 | [vectorbt-build-final.log](../../docs/maintenance-2026-10-12/vectorbt-build-final.log) |
+| python315-sync | `uv sync --python 3.15 --all-groups --all-extras` | 2 | unrecorded | [check record](maintenance/index.html) |
+| python315-lock | `uv lock --upgrade --python 3.15` | 0 | unrecorded | [check record](maintenance/index.html) |
+| python314-sync | `uv sync --all-groups --all-extras --python 3.14.8` | 0 | 70.89 | [check record](maintenance/index.html) |
+| tests | `uv run --no-sync pytest` | 4 | 17.55 | [check record](maintenance/index.html) |
+| build | `uv build` | 0 | 2.82 | [check record](maintenance/index.html) |
+| tests-lazy-provider-import | `uv run --no-sync pytest` | 2 | 24.44 | [check record](maintenance/index.html) |
+| tests-explicit-time-units | `uv run --no-sync pytest` | 1 | 702.37 | [check record](maintenance/index.html) |
+| cargo-tests | `cargo test --manifest-path rust/Cargo.toml` | 0 | 46.36 | [check record](maintenance/index.html) |
+| tests-current-warning-contracts | `uv run --no-sync pytest` | 2 | 26.95 | [check record](maintenance/index.html) |
+| tests-asserted-warnings | `uv run --no-sync pytest` | 1 | 742.47 | [check record](maintenance/index.html) |
+| tests-warning-assertions | `uv run --no-sync pytest` | 1 | 732.81 | [check record](maintenance/index.html) |
+| data-warning-current | `uv run --no-sync pytest tests/test_data.py::TestData::test_download -x` | 1 | 12.3 | [check record](maintenance/index.html) |
+| engine-parity-current | `uv run --no-sync pytest tests/test_engine.py::TestIndicatorRustParity -x` | 0 | 64.0 | [check record](maintenance/index.html) |
+| data-warning-contracts | `uv run --no-sync pytest tests/test_data.py::TestData::test_download -x` | 0 | 11.98 | [check record](maintenance/index.html) |
+| tests-current-contracts-final | `uv run --no-sync pytest` | 1 | 269.18 | [check record](maintenance/index.html) |
+| tests-all-final | `uv run --no-sync pytest` | 0 | 236.42 | [check record](maintenance/index.html) |
+| build-final | `uv build` | 0 | 1.2 | [check record](maintenance/index.html) |
 
 ## Test summaries and failures
 
