@@ -1,5 +1,11 @@
 # vectorbt -- Development Guide
 
+<!-- current-documentation-provenance -->
+Documentation reviewed: 2026-10-13 · Git source base: `586d2a85a4e4a73a9174fb8973d5869dab4d89ce` · [Current architecture and feature guide](ayu-develop.md).
+Historical execution commands/results below retain their original dates and scope; this metadata update is not a new application test run.
+<!-- /current-documentation-provenance -->
+
+
 ## Setup
 
 ### Prerequisites
